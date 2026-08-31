@@ -15,9 +15,10 @@ export default function CalendarView({ lessons, selectedDate, onDateChange, onLe
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const getLessonsForDay = (day) => {
-    return lessons.filter(lesson => 
-      isSameDay(new Date(lesson.date + "T00:00:00"), day)
-    );
+    return lessons.filter((lesson) => {
+      const lessonDate = lesson.date || lesson.lesson_date;
+      return lessonDate && isSameDay(new Date(`${lessonDate}T00:00:00`), day);
+    });
   };
 
   const handlePreviousMonth = () => {

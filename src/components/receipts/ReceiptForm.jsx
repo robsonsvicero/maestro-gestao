@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getLocalDateString } from "@/utils/dateUtils";
 
 export default function ReceiptForm({ students, onSubmit, onCancel, theme }) {
   const [formData, setFormData] = useState({
@@ -11,7 +12,7 @@ export default function ReceiptForm({ students, onSubmit, onCancel, theme }) {
     student_id: "",
     student_name: "",
     student_email: "",
-    payment_date: new Date().toISOString().split('T')[0],
+    payment_date: getLocalDateString(),
     payment_method: "pix",
     description: "",
     amount: "",
@@ -46,7 +47,7 @@ export default function ReceiptForm({ students, onSubmit, onCancel, theme }) {
       ...formData,
       amount,
       student_name: formData.student_name,
-      payment_date: formData.payment_date || new Date().toISOString().split('T')[0],
+      payment_date: formData.payment_date || getLocalDateString(),
     });
   };
 

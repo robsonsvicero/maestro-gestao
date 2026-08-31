@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Trash2, Calendar, DollarSign } from "lucide-react";
 import { format } from "date-fns";
+import { parseLocalDate } from "@/utils/dateUtils";
 import { motion } from "framer-motion";
 
 const paymentMethodLabels = {
@@ -91,7 +92,7 @@ export default function ReceiptList({ receipts, isLoading, onPreview, onDelete, 
                   theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
                 }`}>
                   <Calendar className="w-4 h-4 text-[#094C7E]" />
-                  {format(new Date(receipt.payment_date), "dd/MM/yyyy")}
+                  {format(parseLocalDate(receipt.payment_date), "dd/MM/yyyy")}
                 </div>
 
                 <div className={`flex items-center gap-2 font-semibold text-lg ${

@@ -59,7 +59,10 @@ export default function DayView({ lessons, selectedDate, onDateChange, onLessonC
   // Lessons for the selected day
   const dayLessons = useMemo(() =>
     lessons
-      .filter(l => l?.date && isSameDay(new Date(l.date + "T00:00:00"), selectedDate))
+      .filter((lesson) => {
+        const lessonDate = lesson?.date || lesson?.lesson_date;
+        return lessonDate && isSameDay(new Date(`${lessonDate}T00:00:00`), selectedDate);
+      })
       .sort((a, b) => {
         const aTime = a.start_time || '23:59';
         const bTime = b.start_time || '23:59';
@@ -77,6 +80,55 @@ export default function DayView({ lessons, selectedDate, onDateChange, onLessonC
     }),
     [dayLessons, startHour, endHour]
   );
+
+  // Distribui aulas simultâneas em colunas para que seus blocos não se sobreponham.
+  const positionedLessons = useMemo(() => {
+    const sortedLessons = timedLessons
+      .map((lesson) => {
+        const start = timeToMinutes(lesson.start_time);
+        const end = timeToMinutes(lesson.end_time) || start + (lesson.duration || 60);
+        return { lesson, start, end };
+      })
+      .sort((first, second) => first.start - second.start || first.end - second.end);
+
+    const groups = [];
+    let group = [];
+    let groupEnd = -1;
+
+    sortedLessons.forEach((item) => {
+      if (group.length > 0 && item.start >= groupEnd) {
+        groups.push(group);
+        group = [];
+        groupEnd = -1;
+      }
+
+      group.push(item);
+      groupEnd = Math.max(groupEnd, item.end);
+    });
+
+    if (group.length > 0) groups.push(group);
+
+    return groups.flatMap((overlappingLessons) => {
+      const active = [];
+      let columnCount = 0;
+      const positioned = overlappingLessons.map((item) => {
+        for (let index = active.length - 1; index >= 0; index--) {
+          if (active[index].end <= item.start) active.splice(index, 1);
+        }
+
+        const occupiedColumns = new Set(active.map((activeItem) => activeItem.column));
+        let column = 0;
+        while (occupiedColumns.has(column)) column++;
+
+        const positionedItem = { ...item, column };
+        active.push(positionedItem);
+        columnCount = Math.max(columnCount, active.length);
+        return positionedItem;
+      });
+
+      return positioned.map((item) => ({ ...item, columnCount }));
+    });
+  }, [timedLessons]);
 
   // Unscheduled lessons (no start_time or cancelled)
   const unscheduledLessons = useMemo(() =>
@@ -235,20 +287,24 @@ export default function DayView({ lessons, selectedDate, onDateChange, onLessonC
                 })()}
 
                 {/* Lesson blocks */}
-                {timedLessons.map((lesson, idx) => {
-                  const start = timeToMinutes(lesson.start_time);
-                  const end = timeToMinutes(lesson.end_time);
+                {positionedLessons.map(({ lesson, start, end, column, columnCount }, idx) => {
                   const top = ((start - startHour * 60) / 60) * HOUR_HEIGHT;
                   const height = Math.max(((end - start) / 60) * HOUR_HEIGHT - 3, 28);
                   const status = statusConfig[lesson.status] || statusConfig.scheduled;
+                  const columnWidth = 100 / columnCount;
 
                   return (
                     <div
                       key={lesson.id || idx}
-                      className={`absolute left-2 right-2 rounded-lg border-l-4 ${status.border} bg-white dark:bg-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden z-10 ${
+                      className={`absolute rounded-lg border-l-4 ${status.border} bg-white dark:bg-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden z-10 ${
                         lesson.status === "cancelled" ? "opacity-50" : ""
                       }`}
-                      style={{ top, height }}
+                      style={{
+                        top,
+                        height,
+                        left: `${column * columnWidth}%`,
+                        width: `${columnWidth}%`,
+                      }}
                       onClick={() => onLessonClick(lesson)}
                     >
                       <div className="px-3 py-1.5 h-full flex flex-col justify-start">

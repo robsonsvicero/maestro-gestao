@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarCheck } from "lucide-react";
+import { getPaymentStatus } from "@/utils/paymentUtils";
 
 export default function LessonForm({ lesson, students, onSubmit, onCancel, theme, appSettings, defaultDate, defaultStartTime }) {
   const formatDateInput = (date) => {
@@ -36,6 +37,11 @@ export default function LessonForm({ lesson, students, onSubmit, onCancel, theme
     payment_status: "pending"
   });
 
+  const selectedStudent = students.find((student) => student.id === formData.student_id);
+  const calculatedPaymentStatus = selectedStudent
+    ? getPaymentStatus(selectedStudent.next_payment_date, selectedStudent.last_payment_date)
+    : formData.payment_status || 'pending';
+
   const handleStudentChange = (studentId) => {
     const student = students.find(s => s.id === studentId);
     if (student) {
@@ -48,24 +54,21 @@ export default function LessonForm({ lesson, students, onSubmit, onCancel, theme
     }
   };
 
-  const calculateDuration = (start, end) => {
-    const [startHour, startMin] = start.split(':').map(Number);
-    const [endHour, endMin] = end.split(':').map(Number);
-    return (endHour * 60 + endMin) - (startHour * 60 + startMin);
-  };
-
-  const handleTimeChange = (field, value) => {
-    const newData = { ...formData, [field]: value };
-    if (newData.start_time && newData.end_time) {
-      newData.duration = calculateDuration(newData.start_time, newData.end_time);
-    }
-    setFormData(newData);
+  const handleStartTimeChange = (startTime) => {
+    const duration = formData.duration || initialDuration;
+    setFormData({
+      ...formData,
+      start_time: startTime,
+      end_time: startTime ? calculateEndTime(startTime, duration) : '',
+      duration,
+    });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit({
       ...formData,
+      payment_status: calculatedPaymentStatus,
       price: undefined,
     });
   };
@@ -155,7 +158,7 @@ export default function LessonForm({ lesson, students, onSubmit, onCancel, theme
             id="start_time"
             type="time"
             value={formData.start_time}
-            onChange={(e) => handleTimeChange('start_time', e.target.value)}
+            onChange={(e) => handleStartTimeChange(e.target.value)}
             required
             className={inputClass}
           />
@@ -167,9 +170,9 @@ export default function LessonForm({ lesson, students, onSubmit, onCancel, theme
             id="end_time"
             type="time"
             value={formData.end_time}
-            onChange={(e) => handleTimeChange('end_time', e.target.value)}
-            required
-            className={inputClass}
+            readOnly
+            disabled
+            className={`${inputClass} bg-slate-100 text-slate-600 cursor-not-allowed dark:bg-slate-800 dark:text-slate-300`}
           />
         </div>
 
@@ -197,18 +200,17 @@ export default function LessonForm({ lesson, students, onSubmit, onCancel, theme
 
         <div className="space-y-2">
           <Label htmlFor="payment_status" className={labelClass}>Pagamento</Label>
-          <Select
-            value={formData.payment_status}
-            onValueChange={(value) => setFormData({ ...formData, payment_status: value })}
-          >
-            <SelectTrigger className={inputClass}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pending">Pendente</SelectItem>
-              <SelectItem value="paid">Pago</SelectItem>
-            </SelectContent>
-          </Select>
+          <Input
+            id="payment_status"
+            type="text"
+            value={calculatedPaymentStatus === 'paid' ? 'Pago' : 'Pendente'}
+            disabled
+            readOnly
+            className={`${inputClass} bg-slate-100 text-slate-600 cursor-not-allowed dark:bg-slate-800 dark:text-slate-300`}
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Calculado automaticamente conforme o pagamento do aluno.
+          </p>
         </div>
       </div>
 

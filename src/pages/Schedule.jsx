@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Calendar as CalendarIcon, List, CalendarDays } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import { getPaymentStatus } from "@/utils/paymentUtils";
 
 import LessonForm from "../components/schedule/LessonForm";
 import CalendarView from "../components/schedule/CalendarView";
@@ -36,6 +37,15 @@ export default function Schedule() {
   });
 
   const settings = appSettings[0] || {};
+  const lessonsWithPaymentStatus = lessons.map((lesson) => {
+    const student = students.find((item) => item.id === lesson.student_id);
+    if (!student) return lesson;
+
+    return {
+      ...lesson,
+      payment_status: getPaymentStatus(student.next_payment_date, student.last_payment_date),
+    };
+  });
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
@@ -201,7 +211,7 @@ Nos vemos em breve!
 
         <TabsContent value="calendar" className="mt-6">
           <CalendarView
-            lessons={lessons}
+            lessons={lessonsWithPaymentStatus}
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
             onLessonClick={handleEdit}
@@ -213,7 +223,7 @@ Nos vemos em breve!
 
         <TabsContent value="day" className="mt-6">
           <DayView
-            lessons={lessons}
+            lessons={lessonsWithPaymentStatus}
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
             onLessonClick={handleEdit}
@@ -227,7 +237,7 @@ Nos vemos em breve!
 
         <TabsContent value="list" className="mt-6">
           <ListView
-            lessons={lessons}
+            lessons={lessonsWithPaymentStatus}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onStatusChange={handleStatusChange}

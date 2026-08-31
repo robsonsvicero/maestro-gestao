@@ -86,6 +86,7 @@ create table if not exists public.student (
   address text,
   instrument text,
   level text default 'beginner',
+  student_status text not null default 'active',
   lesson_day text,
   lesson_time text,
   birthday_day integer,
@@ -338,7 +339,18 @@ Se alguma página estiver em branco:
 - O nome exato da tabela precisa bater com o código. Se qualquer uma estiver com nome diferente, a aplicação quebra na leitura.
 - Em produção, vale a pena usar políticas RLS e evitar permitir escrita pública sem autenticação.
 
-## 11) Próximo passo recomendado
+## 11) Manter automaticamente 12 meses de aulas
+
+O arquivo [`supabase/maintain_future_lessons.sql`](supabase/maintain_future_lessons.sql) cria uma tarefa mensal no Supabase. Ela roda no primeiro dia de cada mês, às 03:00 (horário de São Paulo), e para cada aluno ativo com dia e horário de aula:
+
+- verifica as aulas entre hoje e os próximos 12 meses;
+- cria somente as datas que ainda não existem;
+- não duplica aulas já agendadas;
+- preenche também os alunos que já estavam cadastrados na primeira execução.
+
+No SQL Editor do Supabase, execute todo o conteúdo do arquivo. A extensão `pg_cron` precisa estar disponível no projeto.
+
+## 12) Próximo passo recomendado
 
 Em seguida, recomendo:
 

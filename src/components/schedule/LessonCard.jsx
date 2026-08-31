@@ -59,14 +59,14 @@ export default function LessonCard({ lesson, onEdit, onDelete, onStatusChange, t
                   theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
                 }`}>
                   <Clock className="w-4 h-4" />
-                  {format(new Date(lesson.date), "dd/MM/yyyy")}
+                  {format(new Date(`${lesson.date || lesson.lesson_date}T00:00:00`), "dd/MM/yyyy")}
                 </div>
               )}
               <div className={`flex items-center gap-2 ${
                 theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
               }`}>
                 <Clock className="w-4 h-4" />
-                {lesson.start_time} - {lesson.end_time} ({lesson.duration}min)
+                {lesson.start_time} - {lesson.end_time || '—'} ({lesson.duration || 60}min)
               </div>
               {lesson.location && (
                 <div className={`flex items-center gap-2 ${

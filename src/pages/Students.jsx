@@ -1,10 +1,14 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { getNextPaymentDate, getPaymentStatus } from "@/utils/paymentUtils";
+import { generateAutomaticLessons, deleteFutureLessons } from "@/utils/lessonUtils";
+import { getLocalDateString } from "@/utils/dateUtils";
 
 import StudentForm from "../components/students/StudentForm";
 import StudentCard from "../components/students/StudentCard";
@@ -32,36 +36,101 @@ export default function Students() {
   const settings = appSettings[0] || {};
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Student.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['students']);
+    mutationFn: async (data) => {
+      const created = await base44.entities.Student.create(data);
+      if (!created) {
+        throw new Error('Não foi possível salvar o aluno. Verifique a sessão e as permissões do Supabase.');
+      }
+      return created;
+    },
+    onSuccess: async (createdStudent) => {
+      // Agendar aulas automaticamente se tiver dia/horário definido e status ativo
+      if (createdStudent.lesson_day && createdStudent.lesson_time && createdStudent.student_status === 'active') {
+        try {
+          const createdLessons = await generateAutomaticLessons(createdStudent, base44);
+          queryClient.invalidateQueries({ queryKey: ['lessons'] });
+          toast.success(`Aluno salvo e ${createdLessons.length} aulas agendadas automaticamente!`);
+        } catch (error) {
+          console.error('Erro ao agendar aulas:', error);
+          toast.error('Aluno salvo, mas houve erro ao agendar aulas.');
+        }
+      } else {
+        toast.success('Aluno salvo com sucesso!');
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['students'] });
       setShowForm(false);
       setEditingStudent(null);
+      setSelectedStudentForFees(null);
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Não foi possível salvar o aluno.');
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Student.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const updated = await base44.entities.Student.update(id, data);
+      if (!updated) {
+        throw new Error('Não foi possível atualizar o aluno. Verifique a sessão e as permissões do Supabase.');
+      }
+      return updated;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries(['students']);
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      toast.success('Dados do aluno atualizados com sucesso!');
       setShowForm(false);
       setEditingStudent(null);
+      setSelectedStudentForFees(null);
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Não foi possível atualizar o aluno.');
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Student.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['students']);
+      queryClient.invalidateQueries({ queryKey: ['students'] });
     },
   });
 
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
   const handleSubmit = (data) => {
-    if (editingStudent) {
-      updateMutation.mutate({ id: editingStudent.id, data });
-    } else {
+    // Para criação de novo aluno
+    if (!editingStudent) {
       createMutation.mutate(data);
+      return;
     }
+
+    // Para atualização de aluno existente
+    const wasActive = editingStudent.student_status === 'active';
+    const isNowInactive = data.student_status === 'inactive';
+
+    // Se mudou de ativo para inativo, deletar aulas futuras
+    if (wasActive && isNowInactive) {
+      deleteFutureLessons(editingStudent.id, base44).then((deletedCount) => {
+        if (deletedCount > 0) {
+          toast.info(`${deletedCount} aula(s) futura(s) cancelada(s)`);
+          queryClient.invalidateQueries({ queryKey: ['lessons'] });
+        }
+      }).catch((error) => {
+        console.error('Erro ao deletar aulas:', error);
+      });
+    }
+
+    // Se mudou de inativo para ativo, criar novas aulas
+    if (!wasActive && data.student_status === 'active' && data.lesson_day && data.lesson_time) {
+      generateAutomaticLessons({ ...data, id: editingStudent.id }, base44).then((createdLessons) => {
+        queryClient.invalidateQueries({ queryKey: ['lessons'] });
+        toast.success(`${createdLessons.length} aulas agendadas automaticamente!`);
+      }).catch((error) => {
+        console.error('Erro ao agendar aulas:', error);
+      });
+    }
+
+    updateMutation.mutate({ id: editingStudent.id, data });
   };
 
   const handleEdit = (student) => {
@@ -75,7 +144,7 @@ export default function Students() {
     }
   };
 
-  const createReceiptForStudent = async (student, monthNumber, paymentDate = new Date().toISOString().split('T')[0], paymentMethod = 'pix') => {
+  const createReceiptForStudent = async (student, monthNumber, paymentDate = getLocalDateString(), paymentMethod = 'pix') => {
     const amount = Number(student.monthly_payment || 0);
     const monthLabel = new Date(new Date().getFullYear(), monthNumber - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
@@ -108,7 +177,7 @@ export default function Students() {
   };
 
   const handleRegisterPayment = async (student, monthNumber = new Date().getMonth() + 1, paymentInfo = {}) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     const paymentEntry = {
       month: String(monthNumber),
       year: String(new Date().getFullYear()),
@@ -127,11 +196,21 @@ export default function Students() {
       paymentHistory.push(paymentEntry);
     }
 
+    // Recalcular o próximo vencimento considerando o novo pagamento
+    const nextPaymentDate = getNextPaymentDate(
+      student.payment_day,
+      'pending',
+      paymentHistory,
+    );
+
+    // Recalcular o status de pagamento
+    const paymentStatus = getPaymentStatus(nextPaymentDate, today);
+
     const updatedStudent = {
       ...student,
-      payment_status: 'paid',
+      payment_status: paymentStatus,
       last_payment_date: today,
-      next_payment_date: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split('T')[0],
+      next_payment_date: nextPaymentDate,
       payment_history: paymentHistory,
     };
 
@@ -143,17 +222,19 @@ export default function Students() {
   const handlePayMonth = async (student, monthNumber, paymentInfo = {}) => {
     const { generateReceipt = false, paymentMethod = 'pix' } = paymentInfo;
     const updatedStudent = await handleRegisterPayment(student, monthNumber, { paymentMethod });
+    
+    // Atualizar o estado com os dados atualizados imediatamente
     setSelectedStudentForFees(updatedStudent);
 
     if (generateReceipt) {
-      const receipt = await createReceiptForStudent(student, monthNumber, new Date().toISOString().split('T')[0], paymentMethod);
+      const receipt = await createReceiptForStudent(updatedStudent, monthNumber, getLocalDateString(), paymentMethod);
       queryClient.invalidateQueries(['receipts']);
       setPreviewReceipt(receipt);
     }
   };
 
   const handleGenerateReceipt = async (student, monthNumber, paymentMethod = 'pix') => {
-    const receipt = await createReceiptForStudent(student, monthNumber, new Date().toISOString().split('T')[0], paymentMethod);
+    const receipt = await createReceiptForStudent(student, monthNumber, getLocalDateString(), paymentMethod);
     queryClient.invalidateQueries(['receipts']);
     setPreviewReceipt(receipt);
   };
@@ -236,6 +317,7 @@ export default function Students() {
           <StudentForm
             student={editingStudent}
             onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
             onCancel={() => {
               setShowForm(false);
               setEditingStudent(null);

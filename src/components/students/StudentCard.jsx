@@ -1,6 +1,7 @@
 import { Phone, Mail, MapPin, CalendarDays, Music2, Pencil, Trash2, CheckCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { parseLocalDate } from "@/utils/dateUtils";
 
 export default function StudentCard({
   student,
@@ -20,7 +21,7 @@ export default function StudentCard({
   const formatDate = (value) => {
     if (!value) return "";
 
-    const date = new Date(value);
+    const date = parseLocalDate(value);
     if (Number.isNaN(date.getTime())) return value;
 
     const day = String(date.getDate()).padStart(2, "0");
@@ -60,11 +61,15 @@ export default function StudentCard({
         {(student.payment_status || student.next_payment_date) && (
           <div className="flex items-center gap-2">
             <span className="text-[#094C7E] font-semibold">Pagamento:</span>
-            <span className={student.payment_status === 'paid' ? 'text-green-600' : 'text-orange-600'}>
-              {student.payment_status === 'paid' ? 'Pago' : 'Pendente'}
-            </span>
-            {student.next_payment_date && (
-              <span className="text-xs text-slate-500">({formatDate(student.next_payment_date)})</span>
+            {student.payment_status === 'paid' ? (
+              <>
+                <span className="text-green-600 font-medium">Pago</span>
+                {student.last_payment_date && (
+                  <span className="text-xs text-slate-500">em {formatDate(student.last_payment_date)}</span>
+                )}
+              </>
+            ) : (
+              <span className="font-bold text-red-600 uppercase">PENDENTE</span>
             )}
           </div>
         )}

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
+import { jsPDF } from "jspdf";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,11 +8,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, PencilLine, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, FileDown, Plus, Search, PencilLine, Trash2 } from "lucide-react";
+import { getLocalDateString, parseLocalDate } from "@/utils/dateUtils";
 
 const fallbackTransactions = [];
 
-const getTodayDate = () => new Date().toISOString().split('T')[0];
+const getTodayDate = () => getLocalDateString();
+
+const paymentMethodLabels = {
+  pix: 'PIX',
+  cash: 'Dinheiro',
+  credit_card: 'Cartão de crédito',
+  debit_card: 'Cartão de débito',
+  bank_transfer: 'Transferência',
+  other: 'Outro',
+};
+
+const formatCurrency = (value) => `R$ ${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+const formatDate = (value) => value ? parseLocalDate(value).toLocaleDateString('pt-BR') : '—';
 
 const emptyTransaction = {
   type: 'expense',
@@ -27,7 +41,11 @@ export default function Finances() {
   const [showForm, setShowForm] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [formData, setFormData] = useState(emptyTransaction);
-  const [filters] = useState({ type: 'all', category: 'all', period: 'all' });
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
   const queryClient = useQueryClient();
 
   const { data: transactions = fallbackTransactions, isLoading } = useQuery({
@@ -111,28 +129,149 @@ export default function Finances() {
     createMutation.mutate(payload);
   };
 
-  const filteredTransactions = transactions.filter(transaction => {
-    if (filters.type !== 'all' && transaction.type !== filters.type) return false;
-    if (filters.category !== 'all' && transaction.category !== filters.category) return false;
+  const filteredTransactions = useMemo(() => transactions.filter((transaction) => {
+    const transactionDate = transaction.date?.slice(0, 10) || '';
+    if (startDate && transactionDate < startDate) return false;
+    if (endDate && transactionDate > endDate) return false;
 
-    if (filters.period !== 'all') {
-      const transactionDate = new Date(transaction.date);
-      const now = new Date();
+    const searchableContent = [
+      transaction.type === 'income' ? 'receita' : 'despesa',
+      transaction.category,
+      transaction.student_name,
+      transaction.description,
+      paymentMethodLabels[transaction.payment_method] || transaction.payment_method,
+    ].filter(Boolean).join(' ').toLowerCase();
 
-      if (filters.period === 'today') {
-        return transactionDate.toDateString() === now.toDateString();
-      } else if (filters.period === 'week') {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        return transactionDate >= weekAgo;
-      } else if (filters.period === 'month') {
-        return transactionDate.getMonth() === now.getMonth() && transactionDate.getFullYear() === now.getFullYear();
-      } else if (filters.period === 'year') {
-        return transactionDate.getFullYear() === now.getFullYear();
-      }
+    return searchableContent.includes(searchTerm.trim().toLowerCase());
+  }), [transactions, startDate, endDate, searchTerm]);
+
+  const sortedTransactions = useMemo(() => [...filteredTransactions].sort((first, second) => {
+    const values = {
+      date: [(first.date || ''), (second.date || '')],
+      entry: [
+        `${first.type === 'income' ? 'Receita' : 'Despesa'} ${first.student_name || ''}`,
+        `${second.type === 'income' ? 'Receita' : 'Despesa'} ${second.student_name || ''}`,
+      ],
+      description: [first.description || '', second.description || ''],
+      payment_method: [paymentMethodLabels[first.payment_method] || '', paymentMethodLabels[second.payment_method] || ''],
+      amount: [Number(first.amount || 0), Number(second.amount || 0)],
+    };
+    const [firstValue, secondValue] = values[sortConfig.key];
+    const comparison = typeof firstValue === 'number'
+      ? firstValue - secondValue
+      : String(firstValue).localeCompare(String(secondValue), 'pt-BR');
+    return sortConfig.direction === 'asc' ? comparison : -comparison;
+  }), [filteredTransactions, sortConfig]);
+
+  const requestSort = (key) => {
+    setSortConfig((current) => ({
+      key,
+      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  const handleMonthChange = (month) => {
+    setSelectedMonth(month);
+    if (!month) {
+      setStartDate('');
+      setEndDate('');
+      return;
     }
 
-    return true;
-  });
+    const [year, monthNumber] = month.split('-').map(Number);
+    setStartDate(`${month}-01`);
+    setEndDate(getLocalDateString(new Date(year, monthNumber, 0)));
+  };
+
+  const exportStatementToPdf = () => {
+    const document = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth = document.internal.pageSize.getWidth();
+    const pageHeight = document.internal.pageSize.getHeight();
+    const margin = 12;
+    const columns = [
+      { title: 'Data pagamento', width: 31 },
+      { title: 'Lançamento + origem', width: 57 },
+      { title: 'Descrição', width: 90 },
+      { title: 'Forma de pagamento', width: 45 },
+      { title: 'Valor', width: 35 },
+    ];
+    const filtersLabel = [
+      startDate ? `De ${formatDate(startDate)}` : '',
+      endDate ? `até ${formatDate(endDate)}` : '',
+      searchTerm ? `Busca: ${searchTerm}` : '',
+    ].filter(Boolean).join(' · ') || 'Todos os lançamentos';
+    let y = 14;
+
+    const drawHeader = (isFirstPage = false) => {
+      if (isFirstPage) {
+        document.setFont('helvetica', 'bold');
+        document.setFontSize(16);
+        document.text('Extrato financeiro', margin, y);
+        y += 7;
+        document.setFont('helvetica', 'normal');
+        document.setFontSize(9);
+        document.text(filtersLabel, margin, y);
+        y += 8;
+      }
+      document.setFillColor(9, 76, 126);
+      document.rect(margin, y, pageWidth - margin * 2, 7, 'F');
+      document.setTextColor(255, 255, 255);
+      document.setFont('helvetica', 'bold');
+      document.setFontSize(8);
+      let x = margin + 2;
+      columns.forEach((column) => {
+        document.text(column.title, x, y + 4.6);
+        x += column.width;
+      });
+      document.setTextColor(20, 30, 45);
+      document.setFont('helvetica', 'normal');
+      y += 7;
+    };
+
+    drawHeader(true);
+    sortedTransactions.forEach((transaction, index) => {
+      const rowValues = [
+        formatDate(transaction.date),
+        `${transaction.type === 'income' ? 'Receita' : 'Despesa'}${transaction.student_name ? ` - ${transaction.student_name}` : ''}`,
+        transaction.description || '—',
+        paymentMethodLabels[transaction.payment_method] || transaction.payment_method || '—',
+        `${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}`,
+      ];
+      const lines = rowValues.map((value, columnIndex) => document.splitTextToSize(value, columns[columnIndex].width - 4));
+      const rowHeight = Math.max(7, ...lines.map((line) => line.length * 4.2 + 3));
+
+      if (y + rowHeight > pageHeight - 18) {
+        document.addPage();
+        y = 14;
+        drawHeader();
+      }
+
+      if (index % 2 === 1) {
+        document.setFillColor(245, 248, 250);
+        document.rect(margin, y, pageWidth - margin * 2, rowHeight, 'F');
+      }
+      let x = margin + 2;
+      document.setFontSize(8);
+      lines.forEach((line, columnIndex) => {
+        document.text(line, x, y + 4.3);
+        x += columns[columnIndex].width;
+      });
+      y += rowHeight;
+    });
+
+    if (y + 14 > pageHeight - 8) {
+      document.addPage();
+      y = 14;
+    }
+    document.setDrawColor(203, 213, 225);
+    document.line(margin, y + 2, pageWidth - margin, y + 2);
+    document.setFont('helvetica', 'bold');
+    document.setFontSize(9);
+    document.text(`Receitas: ${formatCurrency(totals.income)}`, margin, y + 8);
+    document.text(`Despesas: ${formatCurrency(totals.expenses)}`, margin + 65, y + 8);
+    document.text(`Saldo: ${formatCurrency(totals.income - totals.expenses)}`, margin + 130, y + 8);
+    document.save(`extrato-financeiro-${getLocalDateString()}.pdf`);
+  };
 
   const totals = filteredTransactions.reduce((acc, t) => {
     if (t.type === 'income') acc.income += Number(t.amount || 0);
@@ -147,10 +286,16 @@ export default function Finances() {
           <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-slate-100 mb-2">Finanças</h1>
           <p className="text-slate-600 dark:text-slate-400">Gerencie suas receitas e despesas</p>
         </div>
-        <Button onClick={openNewTransactionForm} className="bg-gradient-to-r from-[#094C7E] to-[#0A5A94] hover:shadow-lg transition-all">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={exportStatementToPdf} disabled={filteredTransactions.length === 0}>
+            <FileDown className="w-4 h-4 mr-2" />
+            Salvar extrato em PDF
+          </Button>
+          <Button onClick={openNewTransactionForm} className="bg-gradient-to-r from-[#094C7E] to-[#0A5A94] hover:shadow-lg transition-all">
           <Plus className="w-4 h-4 mr-2" />
           Nova Transação
-        </Button>
+          </Button>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
@@ -169,6 +314,30 @@ export default function Finances() {
           </p>
         </Card>
       </div>
+
+      <Card className="p-4 shadow-sm">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="space-y-2">
+            <Label htmlFor="finance-month">Mês</Label>
+            <Input id="finance-month" type="month" value={selectedMonth} onChange={(event) => handleMonthChange(event.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="finance-start-date">Data inicial</Label>
+            <Input id="finance-start-date" type="date" value={startDate} onChange={(event) => { setStartDate(event.target.value); setSelectedMonth(''); }} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="finance-end-date">Data final</Label>
+            <Input id="finance-end-date" type="date" value={endDate} onChange={(event) => { setEndDate(event.target.value); setSelectedMonth(''); }} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="finance-search">Pesquisar lançamento</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input id="finance-search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Descrição, origem ou forma..." className="pl-9" />
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {showForm && (
         <Card className="p-6 bg-white dark:bg-slate-800 shadow-xl">
@@ -302,7 +471,51 @@ export default function Finances() {
         ) : filteredTransactions.length === 0 ? (
           <p className="mt-3 text-slate-500">Nenhuma transação registrada.</p>
         ) : (
-          <ul className="mt-4 space-y-3">
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] text-left text-sm">
+                <thead className="border-y bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
+                  <tr>
+                    {[
+                      ['date', 'Data pagamento'],
+                      ['entry', 'Lançamento + origem'],
+                      ['description', 'Descrição'],
+                      ['payment_method', 'Forma de pagamento'],
+                      ['amount', 'Valor'],
+                    ].map(([key, label]) => (
+                      <th key={key} className="px-3 py-3 font-semibold">
+                        <button type="button" onClick={() => requestSort(key)} className="flex items-center gap-1 hover:text-[#094C7E]">
+                          {label}
+                          {sortConfig.key !== key ? <ArrowUpDown className="h-3.5 w-3.5" /> : sortConfig.direction === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
+                        </button>
+                      </th>
+                    ))}
+                    <th className="px-3 py-3 text-right font-semibold">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedTransactions.map((transaction) => (
+                    <tr key={transaction.id} className="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-700/30">
+                      <td className="whitespace-nowrap px-3 py-3">{formatDate(transaction.date)}</td>
+                      <td className="px-3 py-3">
+                        <p className={`font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>{transaction.type === 'income' ? 'Receita' : 'Despesa'}</p>
+                        <p className="text-xs text-slate-500">{transaction.student_name || transaction.category || 'Sem origem'}</p>
+                      </td>
+                      <td className="max-w-xs px-3 py-3 text-slate-700 dark:text-slate-200">{transaction.description || '—'}</td>
+                      <td className="px-3 py-3">{paymentMethodLabels[transaction.payment_method] || transaction.payment_method || '—'}</td>
+                      <td className={`whitespace-nowrap px-3 py-3 text-right font-bold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>{transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}</td>
+                      <td className="px-3 py-3">
+                        <div className="flex justify-end gap-2">
+                          <Button size="icon" variant="outline" onClick={() => openEditTransactionForm(transaction)} className="h-8 w-8"><PencilLine className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="outline" onClick={() => { if (window.confirm('Deseja excluir esta transação?')) deleteMutation.mutate(transaction.id); }} className="h-8 w-8 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {false && (<ul className="mt-4 space-y-3">
             {filteredTransactions.map((t) => (
               <li key={t.id} className="flex flex-col gap-3 rounded border border-slate-200 p-3 text-sm dark:border-slate-700 md:flex-row md:items-center md:justify-between">
                 <div>
@@ -341,7 +554,8 @@ export default function Finances() {
                 </div>
               </li>
             ))}
-          </ul>
+            </ul>)}
+          </>
         )}
       </div>
     </div>

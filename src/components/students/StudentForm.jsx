@@ -4,38 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getNextPaymentDate, getPaymentStatus } from "@/utils/paymentUtils";
 
-const getNextPaymentDate = (paymentDay, paymentStatus = 'pending', paymentHistory = [], referenceDate = new Date()) => {
-  const day = Number(paymentDay);
-  if (!Number.isFinite(day) || day < 1 || day > 31) {
-    return '';
-  }
-
-  const baseDate = new Date(referenceDate);
-  const isCurrentMonthPaid = paymentStatus === 'paid' ||
-    paymentHistory.some((entry) => {
-      const entryMonth = Number(entry.month);
-      const entryYear = Number(entry.year);
-      return entryMonth === baseDate.getMonth() + 1 && entryYear === baseDate.getFullYear() && entry.status === 'paid';
-    });
-
-  const finalMonthIndex = isCurrentMonthPaid ? baseDate.getMonth() + 1 : baseDate.getMonth();
-  const finalTargetDate = new Date(baseDate.getFullYear(), finalMonthIndex, 1);
-  const finalLastDayOfMonth = new Date(finalTargetDate.getFullYear(), finalTargetDate.getMonth() + 1, 0).getDate();
-  const finalEffectiveDay = Math.min(day, finalLastDayOfMonth);
-  const candidateDate = new Date(finalTargetDate.getFullYear(), finalTargetDate.getMonth(), finalEffectiveDay);
-
-  if (candidateDate < baseDate) {
-    const nextMonthDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 1);
-    const nextMonthLastDay = new Date(nextMonthDate.getFullYear(), nextMonthDate.getMonth() + 1, 0).getDate();
-    const nextMonthEffectiveDay = Math.min(day, nextMonthLastDay);
-    return new Date(nextMonthDate.getFullYear(), nextMonthDate.getMonth(), nextMonthEffectiveDay).toISOString().split('T')[0];
-  }
-
-  return candidateDate.toISOString().split('T')[0];
-};
-
-export default function StudentForm({ student, onSubmit, onCancel, theme }) {
+export default function StudentForm({ student, onSubmit, onCancel, theme, isSubmitting = false }) {
   const [formData, setFormData] = useState(student || {
     full_name: "",
     birthday_day: "",
@@ -46,7 +17,7 @@ export default function StudentForm({ student, onSubmit, onCancel, theme }) {
     parent_name: "",
     parent_phone: "",
     instrument: "",
-    level: "beginner",
+    level: "iniciante",
     lesson_day: "",
     lesson_time: "",
     monthly_payment: "",
@@ -57,6 +28,8 @@ export default function StudentForm({ student, onSubmit, onCancel, theme }) {
     next_payment_date: "",
     notes: ""
   });
+
+  const [calculatedPaymentStatus, setCalculatedPaymentStatus] = useState(formData.payment_status || 'pending');
 
   useEffect(() => {
     if (!formData.payment_day) {
@@ -69,6 +42,14 @@ export default function StudentForm({ student, onSubmit, onCancel, theme }) {
       Array.isArray(formData.payment_history) ? formData.payment_history : [],
     );
 
+    // Calculate automatic payment status
+    const autoStatus = getPaymentStatus(
+      nextDate,
+      formData.last_payment_date,
+    );
+
+    setCalculatedPaymentStatus(autoStatus);
+
     setFormData((current) => {
       if (current.next_payment_date === nextDate) {
         return current;
@@ -76,19 +57,21 @@ export default function StudentForm({ student, onSubmit, onCancel, theme }) {
 
       return { ...current, next_payment_date: nextDate };
     });
-  }, [formData.payment_day, formData.payment_status, formData.payment_history]);
+  }, [formData.payment_day, formData.payment_status, formData.payment_history, formData.last_payment_date]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const nextPaymentDate = getNextPaymentDate(
       formData.payment_day,
-      formData.payment_status || 'pending',
+      calculatedPaymentStatus || 'pending',
       Array.isArray(formData.payment_history) ? formData.payment_history : [],
     );
 
     onSubmit({
       ...formData,
-      next_payment_date: nextPaymentDate,
+      payment_status: calculatedPaymentStatus || 'pending',
+      next_payment_date: nextPaymentDate || null,
+      last_payment_date: formData.last_payment_date || null,
       birthday_day: formData.birthday_day ? parseInt(formData.birthday_day) : undefined,
       birthday_month: formData.birthday_month ? parseInt(formData.birthday_month) : undefined,
       monthly_payment: formData.monthly_payment ? Number(formData.monthly_payment) : 0,
@@ -182,9 +165,9 @@ export default function StudentForm({ student, onSubmit, onCancel, theme }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="beginner">Iniciante</SelectItem>
-              <SelectItem value="intermediate">Intermediário</SelectItem>
-              <SelectItem value="advanced">Avançado</SelectItem>
+              <SelectItem value="iniciante">Iniciante</SelectItem>
+              <SelectItem value="intermediário">Intermediário</SelectItem>
+              <SelectItem value="avançado">Avançado</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -269,18 +252,14 @@ export default function StudentForm({ student, onSubmit, onCancel, theme }) {
 
         <div className="space-y-2">
           <Label htmlFor="payment_status" className={labelClass}>Status do pagamento</Label>
-          <Select
-            value={formData.payment_status || 'pending'}
-            onValueChange={(value) => setFormData({ ...formData, payment_status: value })}
-          >
-            <SelectTrigger className={inputClass}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pending">Pendente</SelectItem>
-              <SelectItem value="paid">Pago</SelectItem>
-            </SelectContent>
-          </Select>
+          <Input
+            id="payment_status"
+            type="text"
+            value={calculatedPaymentStatus === 'paid' ? 'Pago' : 'Pendente'}
+            disabled
+            readOnly
+            className={`${inputClass} bg-slate-100 text-slate-600 cursor-not-allowed dark:bg-slate-800 dark:text-slate-300`}
+          />
         </div>
 
         <div className="space-y-2">
@@ -346,11 +325,15 @@ export default function StudentForm({ student, onSubmit, onCancel, theme }) {
       </div>
 
       <div className="flex gap-3 justify-end">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancelar
         </Button>
-        <Button type="submit" className="bg-gradient-to-r from-[#094C7E] to-[#0A5A94]">
-          {student ? 'Atualizar' : 'Salvar'}
+        <Button
+          type="submit"
+          className="bg-gradient-to-r from-[#094C7E] to-[#0A5A94]"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (student ? 'Atualizando...' : 'Salvando...') : (student ? 'Atualizar' : 'Salvar')}
         </Button>
       </div>
     </form>

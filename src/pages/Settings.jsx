@@ -140,10 +140,10 @@ export default function Settings() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({ password: passwordForm.password });
+      const { data, error } = await supabase.auth.updateUser({ password: passwordForm.password });
 
-      if (error) {
-        throw error;
+      if (error || !data?.user) {
+        throw error || new Error('O Supabase não confirmou a alteração da senha.');
       }
 
       setPasswordForm({ password: "", confirmPassword: "" });
@@ -168,7 +168,7 @@ export default function Settings() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-6">
         {/* Informações Gerais */}
         <Card className="shadow-xl">
           <CardHeader className="border-b">
@@ -386,14 +386,15 @@ export default function Settings() {
 
         <div className="flex justify-end">
           <Button 
-            type="submit" 
+            type="button"
+            onClick={handleSubmit}
             className="bg-gradient-to-r from-[#094C7E] to-[#0A5A94]"
             disabled={updateMutation.isPending}
           >
             {updateMutation.isPending ? 'Salvando...' : 'Salvar Configurações'}
           </Button>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

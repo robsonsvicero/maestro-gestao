@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseLocalDate } from "@/utils/dateUtils";
 
 const paymentMethodLabels = {
   cash: "Dinheiro",
@@ -160,7 +161,7 @@ export default function ReceiptPreview({ receipt, companySettings, onClose, them
                   Data do Pagamento:
                 </p>
                 <p className={theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}>
-                  {format(new Date(receipt.payment_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  {format(parseLocalDate(receipt.payment_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </p>
               </div>
             </div>
@@ -226,7 +227,7 @@ export default function ReceiptPreview({ receipt, companySettings, onClose, them
           <div className={`text-center text-xs mt-8 ${
             theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
           }`}>
-            <p>Recibo emitido em {format(new Date(receipt.created_date || receipt.issue_date || receipt.payment_date), "dd/MM/yyyy")}</p>
+            <p>Recibo emitido em {format(parseLocalDate(receipt.created_date || receipt.issue_date || receipt.payment_date), "dd/MM/yyyy")}</p>
           </div>
         </CardContent>
       </Card>

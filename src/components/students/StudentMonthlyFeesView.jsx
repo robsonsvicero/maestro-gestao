@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle2, FileText, Lock, ReceiptText } from 'lucide-react';
@@ -15,27 +15,19 @@ export default function StudentMonthlyFeesView({ student, onBack, onPay, onGener
   const enrollmentMonthStart = new Date(enrollmentDate.getFullYear(), enrollmentDate.getMonth(), 1);
   const currentMonthIndex = today.getMonth();
   const paymentDay = Number(student.payment_day || 0);
-
-  const getDisplayNextPaymentDate = () => {
-    if (!paymentDay || paymentDay < 1 || paymentDay > 31) return '';
-
-    const baseDate = student.next_payment_date ? new Date(student.next_payment_date + 'T00:00:00') : new Date();
-    if (Number.isNaN(baseDate.getTime())) return '';
-
-    const candidate = new Date(baseDate.getFullYear(), baseDate.getMonth(), paymentDay);
-    if (candidate < new Date(student.created_date || new Date().toISOString())) {
-      const nextMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 1);
-      const lastDayOfMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
-      const effectiveDay = Math.min(paymentDay, lastDayOfMonth);
-      return new Date(nextMonth.getFullYear(), nextMonth.getMonth(), effectiveDay).toISOString().split('T')[0];
-    }
-
-    return candidate.toISOString().split('T')[0];
-  };
+  const nextPaymentDate = student.next_payment_date ? new Date(student.next_payment_date + 'T00:00:00') : null;
   const paymentHistory = Array.isArray(student.payment_history) ? student.payment_history : [];
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [generateReceiptAfterPay, setGenerateReceiptAfterPay] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState('pix');
+
+  // Força re-render quando o student muda
+  useEffect(() => {
+    // Reset modal se estava aberto, para garantir dados frescos
+    if (selectedMonth) {
+      setSelectedMonth(null);
+    }
+  }, [student.id, student.next_payment_date, student.payment_history, student.payment_status]);
 
   const openPaymentModal = (monthNumber) => {
     setSelectedMonth(monthNumber);
@@ -87,7 +79,15 @@ export default function StudentMonthlyFeesView({ student, onBack, onPay, onGener
           const payment = paymentHistory.find((entry) => Number(entry.month) === monthNumber && Number(entry.year) === currentYear);
           const isPaid = payment?.status === 'paid';
           const isDisabled = isBeforeEnrollment;
-          const isFutureFromNextPayment = student.next_payment_date && new Date(student.next_payment_date + 'T00:00:00') >= new Date(currentYear, index, 1, 0, 0, 0) && new Date(student.next_payment_date + 'T00:00:00') < new Date(currentYear, index + 1, 0, 23, 59, 59);
+          const nextMonthStart = nextPaymentDate ? new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth(), 1) : null;
+          const nextMonthEnd = nextMonthStart ? new Date(nextMonthStart.getFullYear(), nextMonthStart.getMonth() + 1, 0, 23, 59, 59) : null;
+          const isFutureFromNextPayment = Boolean(
+            paymentDay > 0 &&
+            nextMonthStart &&
+            nextPaymentDate &&
+            nextPaymentDate >= new Date(currentYear, index, 1, 0, 0, 0) &&
+            nextPaymentDate <= nextMonthEnd
+          );
 
           return (
             <Card

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, User, Send, Sparkles } from "lucide-react";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getPaymentStatus } from "@/utils/paymentUtils";
 
 import ScheduleSuggestions from "../components/schedule/ScheduleSuggestions";
 import StudentSelector from "../components/schedule/StudentSelector";
@@ -130,7 +131,7 @@ export default function AutoSchedule() {
       end_time: selectedSlot.end_time,
       duration: settings.default_lesson_duration || 60,
       status: "scheduled",
-      payment_status: "pending"
+      payment_status: getPaymentStatus(selectedStudent.next_payment_date, selectedStudent.last_payment_date)
     };
 
     createLessonMutation.mutate(lessonData);
@@ -251,7 +252,7 @@ export default function AutoSchedule() {
                     {selectedStudent.full_name}
                   </p>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {selectedStudent.instrument} - {selectedStudent.level === 'beginner' ? 'Iniciante' : selectedStudent.level === 'intermediate' ? 'Intermediário' : 'Avançado'}
+                    {selectedStudent.instrument} - {selectedStudent.level === 'iniciante' ? 'Iniciante' : selectedStudent.level === 'intermediário' ? 'Intermediário' : 'Avançado'}
                   </p>
                 </div>
                 {selectedStudent.lesson_day && (
