@@ -1,233 +1,131 @@
-import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { supabase } from "@/lib/supabaseClient";
-import {
-  LayoutDashboard,
-  Wallet,
-  Users,
-  LogOut,
-  Menu,
-  Music,
-  Receipt as ReceiptIcon,
-  Settings,
-  Calendar,
-  Clock,
-  Sparkles
-} from "lucide-react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { Phone, Mail, MapPin, CalendarDays, Music2, Pencil, Trash2, CheckCircle } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-const navigationItems = [
-  { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard },
-  { title: "Agenda", url: createPageUrl("Schedule"), icon: Calendar },
-  { title: "Agendamento Auto", url: createPageUrl("AutoSchedule"), icon: Sparkles },
-  { title: "Meus Horários", url: createPageUrl("MyHours"), icon: Clock },
-  { title: "Finanças", url: createPageUrl("Finances"), icon: Wallet },
-  { title: "Alunos", url: createPageUrl("Students"), icon: Users },
-  { title: "Recibos", url: createPageUrl("Receipts"), icon: ReceiptIcon },
-];
+export default function StudentCard({
+  student,
+  onEdit,
+  onDelete,
+  onOpenMonthlyFees,
+}) {
+  if (!student) return null;
 
-export default function Layout({ children, currentPageName }) {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-  const [appSettings, setAppSettings] = useState(null);
+  const initials = (student.full_name || "Aluno")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "A";
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const formatDate = (value) => {
+    if (!value) return "";
 
-  const loadData = async () => {
-    try {
-      // 1. Usuário autenticado
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
 
-      if (authUser) {
-        // full_name e role não vêm no auth.users por padrão —
-        // busca na tabela "profiles" (padrão comum no Supabase)
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("full_name, role")
-          .eq("id", authUser.id)
-          .single();
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
 
-        if (profileError) throw profileError;
-
-        setUser({
-          ...authUser,
-          full_name: profile?.full_name,
-          role: profile?.role
-        });
-      }
-
-      // 2. Configurações do app
-      const { data: settings, error: settingsError } = await supabase
-        .from("app_settings")
-        .select("*")
-        .limit(1);
-
-      if (settingsError) throw settingsError;
-      if (settings && settings.length > 0) {
-        setAppSettings(settings[0]);
-      }
-    } catch (error) {
-      console.error("Error loading data:", error);
-    }
+    return `${day}/${month}/${year}`;
   };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate(createPageUrl("Login"));
-  };
-
-  const getUserInitials = () => {
-    if (!user?.full_name) return "U";
-    return user.full_name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
-  };
-
-  const isAdmin = user?.role === 'admin';
 
   return (
-    <SidebarProvider>
-      <style>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          body {
-            background: white !important;
-          }
-        }
-      `}</style>
-
-      <div className="min-h-screen flex w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
-        <Sidebar className="border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 no-print transition-colors">
-          <SidebarHeader className="border-b border-slate-200 dark:border-slate-800 p-6">
-            <div className="flex items-center gap-3">
-              {appSettings?.logo_url ? (
-                <img 
-                  src={appSettings.logo_url} 
-                  alt="Logo" 
-                  className="w-10 h-10 object-contain rounded-lg"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#094C7E] to-[#0A5A94] flex items-center justify-center shadow-lg">
-                  <Music className="w-6 h-6 text-white" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <h2 className="font-bold truncate text-slate-900 dark:text-slate-100">
-                  {appSettings?.school_name || "Escola de Música"}
-                </h2>
-              </div>
+    <Card className="overflow-hidden border-slate-200 bg-white shadow-lg transition-all hover:shadow-xl dark:border-slate-700 dark:bg-slate-800">
+      <div className="bg-gradient-to-r from-[#094C7E] to-[#0A5A94] p-4 text-white">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 text-lg font-bold">
+              {initials}
             </div>
-          </SidebarHeader>
-
-          <SidebarContent className="p-3">
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {navigationItems.map((item) => {
-                    const isActive = location.pathname === item.url;
-                    return (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton 
-                          asChild 
-                          className={`rounded-xl transition-all duration-200 mb-1 ${
-                            isActive 
-                              ? 'bg-gradient-to-r from-[#094C7E] to-[#0A5A94] text-white shadow-md hover:shadow-lg' 
-                              : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          <Link to={item.url} className="flex items-center gap-3 px-4 py-3">
-                            <item.icon className="w-5 h-5" />
-                            <span className="font-medium">{item.title}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                  {isAdmin && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        className={`rounded-xl transition-all duration-200 mb-1 ${
-                          location.pathname === createPageUrl("Settings")
-                            ? 'bg-gradient-to-r from-[#094C7E] to-[#0A5A94] text-white shadow-md hover:shadow-lg' 
-                            : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        <Link to={createPageUrl("Settings")} className="flex items-center gap-3 px-4 py-3">
-                          <Settings className="w-5 h-5" />
-                          <span className="font-medium">Configurações</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-
-          <SidebarFooter className="border-t border-slate-200 dark:border-slate-800 p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar className="w-10 h-10 border-2 border-[#094C7E]">
-                <AvatarFallback className="bg-gradient-to-br from-[#094C7E] to-[#0A5A94] text-white font-semibold">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate text-slate-900 dark:text-slate-100">
-                  {user?.full_name || "Usuário"}
-                </p>
-                <p className="text-xs truncate text-slate-500 dark:text-slate-400">
-                  {user?.email}
-                </p>
-              </div>
+            <div>
+              <h3 className="font-semibold leading-tight">{student.full_name}</h3>
+              <p className="text-xs text-blue-100">{student.instrument || "Instrumento não informado"}</p>
             </div>
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-600 border-slate-300 dark:border-slate-700"
-              onClick={handleLogout}
-            >
-              <LogOut className="w-4 h-4" />
-              Sair
-            </Button>
-          </SidebarFooter>
-        </Sidebar>
-
-        <main className="flex-1 flex flex-col">
-          <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 lg:hidden no-print">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-                <Menu className="w-5 h-5" />
-              </SidebarTrigger>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                {appSettings?.school_name || "Escola de Música"}
-              </h1>
-            </div>
-          </header>
-
-          <div className="flex-1 overflow-auto bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
-            {children}
           </div>
-        </main>
+          <div className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-medium uppercase tracking-wide">
+            {student.level || "Iniciante"}
+          </div>
+        </div>
       </div>
-    </SidebarProvider>
+
+      <div className="space-y-3 p-4 text-sm text-slate-600 dark:text-slate-300">
+        {student.monthly_payment && (
+          <div className="flex items-center gap-2">
+            <span className="text-[#094C7E] font-semibold">Mensalidade:</span>
+            <span>R$ {Number(student.monthly_payment).toFixed(2)}</span>
+          </div>
+        )}
+
+        {(student.payment_status || student.next_payment_date) && (
+          <div className="flex items-center gap-2">
+            <span className="text-[#094C7E] font-semibold">Pagamento:</span>
+            <span className={student.payment_status === 'paid' ? 'text-green-600' : 'text-orange-600'}>
+              {student.payment_status === 'paid' ? 'Pago' : 'Pendente'}
+            </span>
+            {student.next_payment_date && (
+              <span className="text-xs text-slate-500">({formatDate(student.next_payment_date)})</span>
+            )}
+          </div>
+        )}
+
+        {student.phone && (
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-[#094C7E]" />
+            <span>{student.phone}</span>
+          </div>
+        )}
+
+        {student.email && (
+          <div className="flex items-center gap-2">
+            <Mail className="h-4 w-4 text-[#094C7E]" />
+            <span className="truncate">{student.email}</span>
+          </div>
+        )}
+
+        {student.address && (
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-[#094C7E]" />
+            <span className="line-clamp-2">{student.address}</span>
+          </div>
+        )}
+
+        {(student.lesson_day || student.lesson_time) && (
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-[#094C7E]" />
+            <span>
+              {student.lesson_day || "Agenda disponível"}
+              {student.lesson_time ? ` · ${student.lesson_time}` : ""}
+            </span>
+          </div>
+        )}
+
+        {student.notes && (
+          <div className="rounded-lg bg-slate-100 p-2 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+            <div className="mb-1 flex items-center gap-2 font-medium text-slate-700 dark:text-slate-200">
+              <Music2 className="h-3.5 w-3.5 text-[#094C7E]" />
+              Observações
+            </div>
+            <p>{student.notes}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-end gap-2 border-t border-slate-200 p-4 dark:border-slate-700">
+        <Button variant="outline" size="sm" onClick={onOpenMonthlyFees}>
+          <CheckCircle className="mr-2 h-4 w-4" />
+          Mensalidades
+        </Button>
+        
+        <Button variant="outline" size="sm" onClick={onEdit}>
+          <Pencil className="mr-2 h-4 w-4" />
+          Editar
+        </Button>
+        <Button variant="destructive" size="sm" onClick={onDelete}>
+          <Trash2 className="mr-2 h-4 w-4" />
+          Excluir
+        </Button>
+      </div>
+    </Card>
   );
 }

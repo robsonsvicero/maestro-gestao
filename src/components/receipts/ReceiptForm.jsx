@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,6 @@ export default function ReceiptForm({ students, onSubmit, onCancel, theme }) {
     student_id: "",
     student_name: "",
     student_email: "",
-    issue_date: new Date().toISOString().split('T')[0],
     payment_date: new Date().toISOString().split('T')[0],
     payment_method: "pix",
     description: "",
@@ -33,9 +32,21 @@ export default function ReceiptForm({ students, onSubmit, onCancel, theme }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!formData.student_id || !formData.student_name) {
+      return;
+    }
+
+    const amount = Number.parseFloat(formData.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return;
+    }
+
     onSubmit({
       ...formData,
-      amount: parseFloat(formData.amount)
+      amount,
+      student_name: formData.student_name,
+      payment_date: formData.payment_date || new Date().toISOString().split('T')[0],
     });
   };
 

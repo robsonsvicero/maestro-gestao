@@ -1,8 +1,8 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Sparkles, Music2, Clock, MapPin, Pencil, Trash2, CalendarDays, Utensils } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Sparkles, Music2, MapPin, CalendarDays } from "lucide-react";
 import { format, addDays, subDays, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -36,7 +36,7 @@ const timeToMinutes = (timeStr) => {
   return h * 60 + m;
 };
 
-export default function DayView({ lessons, selectedDate, onDateChange, onLessonClick, onDeleteLesson, onStatusChange, onNewLesson, appSettings, isLoading }) {
+export default function DayView({ lessons, selectedDate, onDateChange, onLessonClick, onDeleteLesson: _onDeleteLesson, onStatusChange: _onStatusChange, onNewLesson, appSettings, isLoading }) {
   const dayKey = dayKeyMap[selectedDate.getDay()];
   const availableHours = appSettings?.available_hours?.[dayKey] || [];
 
@@ -59,8 +59,12 @@ export default function DayView({ lessons, selectedDate, onDateChange, onLessonC
   // Lessons for the selected day
   const dayLessons = useMemo(() =>
     lessons
-      .filter(l => isSameDay(new Date(l.date + "T00:00:00"), selectedDate))
-      .sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")),
+      .filter(l => l?.date && isSameDay(new Date(l.date + "T00:00:00"), selectedDate))
+      .sort((a, b) => {
+        const aTime = a.start_time || '23:59';
+        const bTime = b.start_time || '23:59';
+        return aTime.localeCompare(bTime);
+      }),
     [lessons, selectedDate]
   );
 
@@ -265,11 +269,6 @@ export default function DayView({ lessons, selectedDate, onDateChange, onLessonC
                               <span className="flex items-center gap-0.5">
                                 <MapPin className="w-2.5 h-2.5" />
                                 {lesson.location}
-                              </span>
-                            )}
-                            {lesson.price && (
-                              <span className="font-semibold text-green-600 dark:text-green-400">
-                                R$ {lesson.price.toFixed(2)}
                               </span>
                             )}
                             {lesson.payment_status && (

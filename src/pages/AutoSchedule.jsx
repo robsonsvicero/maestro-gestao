@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, User, Send, Sparkles } from "lucide-react";
-import { format, addDays, startOfWeek, isSameDay, parse } from "date-fns";
+import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import ScheduleSuggestions from "../components/schedule/ScheduleSuggestions";

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -8,10 +8,14 @@ import { Input } from "@/components/ui/input";
 
 import StudentForm from "../components/students/StudentForm";
 import StudentCard from "../components/students/StudentCard";
+import StudentMonthlyFeesView from "../components/students/StudentMonthlyFeesView";
+import ReceiptPreview from "../components/receipts/ReceiptPreview";
 
 export default function Students() {
   const [showForm, setShowForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
+  const [selectedStudentForFees, setSelectedStudentForFees] = useState(null);
+  const [previewReceipt, setPreviewReceipt] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
 
@@ -19,6 +23,13 @@ export default function Students() {
     queryKey: ['students'],
     queryFn: () => base44.entities.Student.list('-created_date'),
   });
+
+  const { data: appSettings = [] } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: () => base44.entities.AppSettings.list(),
+  });
+
+  const settings = appSettings[0] || {};
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Student.create(data),
@@ -64,10 +75,138 @@ export default function Students() {
     }
   };
 
+  const createReceiptForStudent = async (student, monthNumber, paymentDate = new Date().toISOString().split('T')[0], paymentMethod = 'pix') => {
+    const amount = Number(student.monthly_payment || 0);
+    const monthLabel = new Date(new Date().getFullYear(), monthNumber - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+    const receiptPayload = {
+      receipt_number: `REC-${Date.now()}`,
+      student_id: student.id,
+      student_name: student.full_name,
+      amount,
+      description: `Mensalidade ${monthLabel}`,
+      payment_date: paymentDate,
+      payment_method: paymentMethod,
+      status: 'paid',
+    };
+
+    const createdReceipt = await base44.entities.Receipt.create(receiptPayload);
+
+    if (createdReceipt) {
+      await base44.entities.Transaction.create({
+        type: 'income',
+        category: 'monthly_payment',
+        amount,
+        description: receiptPayload.description,
+        date: paymentDate,
+        payment_method: receiptPayload.payment_method,
+        student_name: student.full_name,
+      });
+    }
+
+    return createdReceipt;
+  };
+
+  const handleRegisterPayment = async (student, monthNumber = new Date().getMonth() + 1, paymentInfo = {}) => {
+    const today = new Date().toISOString().split('T')[0];
+    const paymentEntry = {
+      month: String(monthNumber),
+      year: String(new Date().getFullYear()),
+      status: 'paid',
+      paid_at: today,
+      amount: Number(student.monthly_payment || 0),
+      payment_method: paymentInfo.paymentMethod || 'pix',
+    };
+
+    const paymentHistory = Array.isArray(student.payment_history) ? [...student.payment_history] : [];
+    const existingIndex = paymentHistory.findIndex((entry) => Number(entry.month) === monthNumber && Number(entry.year) === new Date().getFullYear());
+
+    if (existingIndex >= 0) {
+      paymentHistory[existingIndex] = paymentEntry;
+    } else {
+      paymentHistory.push(paymentEntry);
+    }
+
+    const updatedStudent = {
+      ...student,
+      payment_status: 'paid',
+      last_payment_date: today,
+      next_payment_date: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split('T')[0],
+      payment_history: paymentHistory,
+    };
+
+    await base44.entities.Student.update(student.id, updatedStudent);
+    queryClient.invalidateQueries(['students']);
+    return updatedStudent;
+  };
+
+  const handlePayMonth = async (student, monthNumber, paymentInfo = {}) => {
+    const { generateReceipt = false, paymentMethod = 'pix' } = paymentInfo;
+    const updatedStudent = await handleRegisterPayment(student, monthNumber, { paymentMethod });
+    setSelectedStudentForFees(updatedStudent);
+
+    if (generateReceipt) {
+      const receipt = await createReceiptForStudent(student, monthNumber, new Date().toISOString().split('T')[0], paymentMethod);
+      queryClient.invalidateQueries(['receipts']);
+      setPreviewReceipt(receipt);
+    }
+  };
+
+  const handleGenerateReceipt = async (student, monthNumber, paymentMethod = 'pix') => {
+    const receipt = await createReceiptForStudent(student, monthNumber, new Date().toISOString().split('T')[0], paymentMethod);
+    queryClient.invalidateQueries(['receipts']);
+    setPreviewReceipt(receipt);
+  };
+
   const filteredStudents = students.filter(student =>
     student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.instrument?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (selectedStudentForFees) {
+    return (
+      <div className="relative">
+        <StudentMonthlyFeesView
+          student={selectedStudentForFees}
+          onBack={() => {
+            setSelectedStudentForFees(null);
+            setPreviewReceipt(null);
+          }}
+          onPay={(monthNumber, paymentInfo) => handlePayMonth(selectedStudentForFees, monthNumber, paymentInfo)}
+          onGenerateReceipt={(monthNumber) => handleGenerateReceipt(selectedStudentForFees, monthNumber)}
+        />
+
+        {previewReceipt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+            <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[28px] border border-slate-200 bg-white shadow-[0_25px_80px_rgba(15,23,42,0.35)] dark:border-slate-700 dark:bg-slate-900">
+              <ReceiptPreview
+                receipt={previewReceipt}
+                companySettings={settings}
+                onClose={() => {
+                  setPreviewReceipt(null);
+                  queryClient.invalidateQueries(['students']);
+                  setSelectedStudentForFees((currentStudent) => currentStudent ? { ...currentStudent } : currentStudent);
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (previewReceipt) {
+    return (
+      <ReceiptPreview
+        receipt={previewReceipt}
+        companySettings={settings}
+        onClose={() => {
+          setPreviewReceipt(null);
+          queryClient.invalidateQueries(['students']);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -139,6 +278,8 @@ export default function Students() {
               student={student}
               onEdit={() => handleEdit(student)}
               onDelete={() => handleDelete(student.id)}
+              onRegisterPayment={() => handleRegisterPayment(student)}
+              onOpenMonthlyFees={() => setSelectedStudentForFees(student)}
             />
           ))}
         </div>

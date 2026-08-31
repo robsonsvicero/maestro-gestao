@@ -1,7 +1,6 @@
-import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -70,20 +69,51 @@ function amountToWords(amount) {
 
 export default function ReceiptPreview({ receipt, companySettings, onClose, theme }) {
   const handlePrint = () => {
+    if (onClose) onClose();
+    window.print();
+  };
+
+  const handleDownloadPdf = () => {
+    if (onClose) onClose();
     window.print();
   };
 
   return (
     <div className="p-4 md:p-8 space-y-6">
-      <div className="flex gap-4 no-print">
-        <Button variant="outline" onClick={onClose}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar
-        </Button>
-        <Button onClick={handlePrint} className="bg-gradient-to-r from-[#094C7E] to-[#0A5A94]">
-          <Printer className="w-4 h-4 mr-2" />
-          Imprimir / Salvar PDF
-        </Button>
+      <div className="no-print flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/80 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+            Recibo
+          </p>
+          <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">
+            Pré-visualização
+          </h2>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" onClick={onClose}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar
+          </Button>
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="w-4 h-4 mr-2" />
+            Imprimir
+          </Button>
+          <Button onClick={handleDownloadPdf} className="bg-gradient-to-r from-[#094C7E] to-[#0A5A94]">
+            <Printer className="w-4 h-4 mr-2" />
+            Baixar PDF
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Fechar preview do recibo"
+            className="h-10 w-10 rounded-full text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <Card className={`backdrop-blur-xl shadow-xl max-w-4xl mx-auto ${
@@ -196,7 +226,7 @@ export default function ReceiptPreview({ receipt, companySettings, onClose, them
           <div className={`text-center text-xs mt-8 ${
             theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
           }`}>
-            <p>Recibo emitido em {format(new Date(receipt.created_date || receipt.issue_date), "dd/MM/yyyy")}</p>
+            <p>Recibo emitido em {format(new Date(receipt.created_date || receipt.issue_date || receipt.payment_date), "dd/MM/yyyy")}</p>
           </div>
         </CardContent>
       </Card>

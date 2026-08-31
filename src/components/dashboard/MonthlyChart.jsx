@@ -1,9 +1,7 @@
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { TrendingUp } from "lucide-react";
 import { format, startOfMonth, addDays } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 export default function MonthlyChart({ transactions, theme }) {
   const generateChartData = () => {

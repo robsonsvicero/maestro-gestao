@@ -29,7 +29,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navigationItems = [
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard },
@@ -42,7 +41,7 @@ const navigationItems = [
 ];
 
 /** @param {{ children: React.ReactNode, currentPageName?: string }} props */
-export default function Layout({ children, currentPageName }) {
+export default function Layout({ children, currentPageName: _currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -54,17 +53,28 @@ export default function Layout({ children, currentPageName }) {
 
   const loadData = async () => {
     try {
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
+      let authUser = null;
+
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error && error.status !== 401 && error.name !== 'AuthSessionMissingError') {
+          throw error;
+        }
+        authUser = user;
+      } catch (error) {
+        if (error?.status !== 401 && error?.name !== 'AuthSessionMissingError') {
+          throw error;
+        }
+      }
 
       if (authUser) {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('full_name, role')
           .eq('id', authUser.id)
-          .single();
+          .maybeSingle();
 
-        if (profileError && profileError.code !== 'PGRST116') throw profileError;
+        if (profileError && profileError.status !== 401) throw profileError;
 
         setUser({
           ...authUser,
@@ -78,24 +88,25 @@ export default function Layout({ children, currentPageName }) {
         .select('*')
         .limit(1);
 
-      if (settingsError) throw settingsError;
+      if (settingsError && settingsError.status !== 401) throw settingsError;
       if (settings && settings.length > 0) setAppSettings(settings[0]);
     } catch (error) {
-      console.error("Error loading data:", error);
+      if (error?.status !== 401 && error?.name !== 'AuthSessionMissingError') {
+        console.error("Error loading data:", error);
+      }
     }
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate(createPageUrl('Login'));
+    setUser(null);
+    navigate('/login');
   };
 
-  const getUserInitials = () => {
-    if (!user?.full_name) return "U";
-    return user.full_name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
+  const formatDocument = (value) => {
+    if (!value) return "CPF / CNPJ";
+    return value.replace(/\D/g, '').length <= 11 ? `CPF: ${value}` : `CNPJ: ${value}`;
   };
-
-  const isAdmin = user?.role === 'admin';
 
   return (
     <SidebarProvider>
@@ -112,23 +123,27 @@ export default function Layout({ children, currentPageName }) {
       
       <div className="min-h-screen flex w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
         <Sidebar className="border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 no-print transition-colors">
-          <SidebarHeader className="border-b border-slate-200 dark:border-slate-800 p-6">
-            <div className="flex items-center gap-3">
+          <SidebarHeader className="border-b border-slate-200 dark:border-slate-800 p-4">
+            <div className="flex items-start gap-3">
               {appSettings?.logo_url ? (
                 <img 
                   src={appSettings.logo_url} 
                   alt="Logo" 
-                  className="w-10 h-10 object-contain rounded-lg"
+                  className="w-11 h-11 object-contain rounded-full border border-slate-200 bg-white p-1 shrink-0"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#094C7E] to-[#0A5A94] flex items-center justify-center shadow-lg">
-                  <Music className="w-6 h-6 text-white" />
+                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#094C7E] to-[#0A5A94] flex items-center justify-center shadow-lg shrink-0">
+                  <Music className="w-5 h-5 text-white" />
                 </div>
               )}
-              <div className="flex-1 min-w-0">
-                <h2 className="font-bold truncate text-slate-900 dark:text-slate-100">
-                  {appSettings?.school_name || "Escola de Música"}
+
+              <div className="min-w-0 flex-1">
+                <h2 className="font-bold text-sm leading-snug text-slate-900 dark:text-slate-100 break-words">
+                  {appSettings?.school_name || "Professor"}
                 </h2>
+                <div className="mt-1 text-[10px] font-medium text-slate-600 dark:text-slate-300 break-words">
+                  {formatDocument(appSettings?.cpf_cnpj)}
+                </div>
               </div>
             </div>
           </SidebarHeader>
@@ -157,52 +172,43 @@ export default function Layout({ children, currentPageName }) {
                       </SidebarMenuItem>
                     );
                   })}
-                  {isAdmin && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        className={`rounded-xl transition-all duration-200 mb-1 ${
-                          location.pathname === createPageUrl("Settings")
-                            ? 'bg-gradient-to-r from-[#094C7E] to-[#0A5A94] text-white shadow-md hover:shadow-lg' 
-                            : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        <Link to={createPageUrl("Settings")} className="flex items-center gap-3 px-4 py-3">
-                          <Settings className="w-5 h-5" />
-                          <span className="font-medium">Configurações</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      asChild 
+                      className={`rounded-xl transition-all duration-200 mb-1 ${
+                        location.pathname === createPageUrl("Settings")
+                          ? 'bg-gradient-to-r from-[#094C7E] to-[#0A5A94] text-white shadow-md hover:shadow-lg' 
+                          : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <Link to={createPageUrl("Settings")} className="flex items-center gap-3 px-4 py-3">
+                        <Settings className="w-5 h-5" />
+                        <span className="font-medium">Configurações</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
 
           <SidebarFooter className="border-t border-slate-200 dark:border-slate-800 p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar className="w-10 h-10 border-2 border-[#094C7E]">
-                <AvatarFallback className="bg-gradient-to-br from-[#094C7E] to-[#0A5A94] text-white font-semibold">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate text-slate-900 dark:text-slate-100">
-                  {user?.full_name || "Usuário"}
-                </p>
-                <p className="text-xs truncate text-slate-500 dark:text-slate-400">
-                  {user?.email}
-                </p>
+            <div className="rounded-2xl border border-slate-200 bg-slate-100/80 p-3 dark:border-slate-700 dark:bg-slate-800/80">
+              <div className="mb-3 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                lOGADO
               </div>
+              <p className="truncate text-sm text-slate-700 dark:text-slate-200">
+                {user?.email || "usuario@exemplo.com"}
+              </p>
+              <Button
+                variant="ghost"
+                className="mt-3 w-full justify-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                onClick={handleLogout}
+              >
+                <LogOut className="w-4 h-4" />
+                Sair
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-600 border-slate-300 dark:border-slate-700"
-              onClick={handleLogout}
-            >
-              <LogOut className="w-4 h-4" />
-              Sair
-            </Button>
           </SidebarFooter>
         </Sidebar>
 

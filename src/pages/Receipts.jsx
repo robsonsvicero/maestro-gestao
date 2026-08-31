@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -9,6 +9,17 @@ import { Input } from "@/components/ui/input";
 import ReceiptForm from "../components/receipts/ReceiptForm";
 import ReceiptList from "../components/receipts/ReceiptList";
 import ReceiptPreview from "../components/receipts/ReceiptPreview";
+
+const sanitizeReceiptPayload = (data = {}) => ({
+  receipt_number: data.receipt_number,
+  student_id: data.student_id || null,
+  student_name: data.student_name,
+  amount: Number(data.amount),
+  description: data.description,
+  payment_date: data.payment_date,
+  payment_method: data.payment_method,
+  status: 'paid',
+});
 
 export default function Receipts() {
   const [showForm, setShowForm] = useState(false);
@@ -35,19 +46,23 @@ export default function Receipts() {
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      const receipt = await base44.entities.Receipt.create(data);
-      
-      // Create income transaction
+      const payload = sanitizeReceiptPayload(data);
+      const receipt = await base44.entities.Receipt.create(payload);
+
+      if (!receipt) {
+        throw new Error('Não foi possível criar o recibo. Verifique autenticação e políticas do Supabase.');
+      }
+
       await base44.entities.Transaction.create({
         type: "income",
         category: "lesson_payment",
-        amount: data.amount,
-        description: data.description,
-        date: data.payment_date,
-        payment_method: data.payment_method,
-        student_name: data.student_name
+        amount: payload.amount,
+        description: payload.description,
+        date: payload.payment_date,
+        payment_method: payload.payment_method,
+        student_name: payload.student_name
       });
-      
+
       return receipt;
     },
     onSuccess: () => {

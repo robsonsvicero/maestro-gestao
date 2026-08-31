@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { CalendarCheck } from "lucide-react";
 
 export default function LessonForm({ lesson, students, onSubmit, onCancel, theme, appSettings, defaultDate, defaultStartTime }) {
@@ -34,8 +33,7 @@ export default function LessonForm({ lesson, students, onSubmit, onCancel, theme
     status: "scheduled",
     location: "",
     notes: "",
-    payment_status: "pending",
-    price: ""
+    payment_status: "pending"
   });
 
   const handleStudentChange = (studentId) => {
@@ -68,7 +66,7 @@ export default function LessonForm({ lesson, students, onSubmit, onCancel, theme
     e.preventDefault();
     onSubmit({
       ...formData,
-      price: formData.price ? parseFloat(formData.price) : undefined
+      price: undefined,
     });
   };
 
@@ -193,19 +191,6 @@ export default function LessonForm({ lesson, students, onSubmit, onCancel, theme
             value={formData.location || ''}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             placeholder="Ex: Sala 1, Online"
-            className={inputClass}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="price" className={labelClass}>Valor (R$)</Label>
-          <Input
-            id="price"
-            type="number"
-            step="0.01"
-            value={formData.price || ''}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            placeholder="0,00"
             className={inputClass}
           />
         </div>

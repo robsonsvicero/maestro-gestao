@@ -1,10 +1,8 @@
-import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, MapPin, DollarSign, Pencil, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Clock, MapPin, Pencil, Trash2, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,14 +74,6 @@ export default function LessonCard({ lesson, onEdit, onDelete, onStatusChange, t
                 }`}>
                   <MapPin className="w-4 h-4" />
                   {lesson.location}
-                </div>
-              )}
-              {lesson.price && (
-                <div className={`flex items-center gap-2 font-semibold ${
-                  theme === 'dark' ? 'text-green-400' : 'text-green-600'
-                }`}>
-                  <DollarSign className="w-4 h-4" />
-                  R$ {lesson.price.toFixed(2)}
                 </div>
               )}
             </div>

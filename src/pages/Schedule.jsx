@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -16,7 +16,7 @@ export default function Schedule() {
   const [showForm, setShowForm] = useState(false);
   const [editingLesson, setEditingLesson] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [view, setView] = useState("calendar");
+  const [view, setView] = useState("day");
   const [prefilledStartTime, setPrefilledStartTime] = useState(null);
   const queryClient = useQueryClient();
 
@@ -45,9 +45,7 @@ export default function Schedule() {
       if (settings.sync_with_google_calendar && settings.google_calendar_email) {
         try {
           const student = students.find(s => s.id === data.student_id);
-          const startDateTime = `${data.date}T${data.start_time}:00`;
-          const endDateTime = `${data.date}T${data.end_time}:00`;
-          
+
           const eventDescription = `
 Aula de ${data.instrument}
 Aluno: ${data.student_name}
@@ -187,13 +185,13 @@ Nos vemos em breve!
 
       <Tabs value={view} onValueChange={setView}>
         <TabsList className="bg-white dark:bg-slate-800 border dark:border-slate-700">
-          <TabsTrigger value="calendar" className="data-[state=active]:bg-slate-100 dark:data-[state=active]:bg-slate-700">
-            <CalendarIcon className="w-4 h-4 mr-2" />
-            Calendário
-          </TabsTrigger>
           <TabsTrigger value="day" className="data-[state=active]:bg-slate-100 dark:data-[state=active]:bg-slate-700">
             <CalendarDays className="w-4 h-4 mr-2" />
             Dia
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="data-[state=active]:bg-slate-100 dark:data-[state=active]:bg-slate-700">
+            <CalendarIcon className="w-4 h-4 mr-2" />
+            Mês
           </TabsTrigger>
           <TabsTrigger value="list" className="data-[state=active]:bg-slate-100 dark:data-[state=active]:bg-slate-700">
             <List className="w-4 h-4 mr-2" />

@@ -1,21 +1,13 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Music2 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import LessonCard from "./LessonCard";
 
-const statusColors = {
-  scheduled: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  completed: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-  rescheduled: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-};
-
-export default function CalendarView({ lessons, selectedDate, onDateChange, onLessonClick, onDeleteLesson, onStatusChange, theme, isLoading }) {
+export default function CalendarView({ lessons, selectedDate, onDateChange, onLessonClick, onDeleteLesson, onStatusChange, theme, isLoading: _isLoading }) {
   const [currentMonth, setCurrentMonth] = useState(selectedDate);
 
   const monthStart = startOfMonth(currentMonth);
@@ -158,13 +150,17 @@ export default function CalendarView({ lessons, selectedDate, onDateChange, onLe
           ) : (
             <div className="space-y-4">
               {getLessonsForDay(selectedDate)
-                .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                .sort((a, b) => {
+                  const aTime = a.start_time || '23:59';
+                  const bTime = b.start_time || '23:59';
+                  return aTime.localeCompare(bTime);
+                })
                 .map((lesson) => (
                   <LessonCard
                     key={lesson.id}
                     lesson={lesson}
                     onEdit={() => onLessonClick(lesson)}
-                    onDelete={() => onDeleteLesson(lesson.id)}
+                    onDelete={() => onDeleteLesson?.(lesson.id)}
                     onStatusChange={onStatusChange}
                     theme={theme}
                   />

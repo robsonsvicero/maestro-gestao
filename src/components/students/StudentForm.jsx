@@ -1,9 +1,39 @@
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const getNextPaymentDate = (paymentDay, paymentStatus = 'pending', paymentHistory = [], referenceDate = new Date()) => {
+  const day = Number(paymentDay);
+  if (!Number.isFinite(day) || day < 1 || day > 31) {
+    return '';
+  }
+
+  const baseDate = new Date(referenceDate);
+  const isCurrentMonthPaid = paymentStatus === 'paid' ||
+    paymentHistory.some((entry) => {
+      const entryMonth = Number(entry.month);
+      const entryYear = Number(entry.year);
+      return entryMonth === baseDate.getMonth() + 1 && entryYear === baseDate.getFullYear() && entry.status === 'paid';
+    });
+
+  const finalMonthIndex = isCurrentMonthPaid ? baseDate.getMonth() + 1 : baseDate.getMonth();
+  const finalTargetDate = new Date(baseDate.getFullYear(), finalMonthIndex, 1);
+  const finalLastDayOfMonth = new Date(finalTargetDate.getFullYear(), finalTargetDate.getMonth() + 1, 0).getDate();
+  const finalEffectiveDay = Math.min(day, finalLastDayOfMonth);
+  const candidateDate = new Date(finalTargetDate.getFullYear(), finalTargetDate.getMonth(), finalEffectiveDay);
+
+  if (candidateDate < baseDate) {
+    const nextMonthDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 1);
+    const nextMonthLastDay = new Date(nextMonthDate.getFullYear(), nextMonthDate.getMonth() + 1, 0).getDate();
+    const nextMonthEffectiveDay = Math.min(day, nextMonthLastDay);
+    return new Date(nextMonthDate.getFullYear(), nextMonthDate.getMonth(), nextMonthEffectiveDay).toISOString().split('T')[0];
+  }
+
+  return candidateDate.toISOString().split('T')[0];
+};
 
 export default function StudentForm({ student, onSubmit, onCancel, theme }) {
   const [formData, setFormData] = useState(student || {
@@ -19,15 +49,50 @@ export default function StudentForm({ student, onSubmit, onCancel, theme }) {
     level: "beginner",
     lesson_day: "",
     lesson_time: "",
+    monthly_payment: "",
+    payment_day: "",
+    payment_status: "pending",
+    student_status: "active",
+    last_payment_date: "",
+    next_payment_date: "",
     notes: ""
   });
 
+  useEffect(() => {
+    if (!formData.payment_day) {
+      return;
+    }
+
+    const nextDate = getNextPaymentDate(
+      formData.payment_day,
+      formData.payment_status || 'pending',
+      Array.isArray(formData.payment_history) ? formData.payment_history : [],
+    );
+
+    setFormData((current) => {
+      if (current.next_payment_date === nextDate) {
+        return current;
+      }
+
+      return { ...current, next_payment_date: nextDate };
+    });
+  }, [formData.payment_day, formData.payment_status, formData.payment_history]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    const nextPaymentDate = getNextPaymentDate(
+      formData.payment_day,
+      formData.payment_status || 'pending',
+      Array.isArray(formData.payment_history) ? formData.payment_history : [],
+    );
+
     onSubmit({
       ...formData,
+      next_payment_date: nextPaymentDate,
       birthday_day: formData.birthday_day ? parseInt(formData.birthday_day) : undefined,
       birthday_month: formData.birthday_month ? parseInt(formData.birthday_month) : undefined,
+      monthly_payment: formData.monthly_payment ? Number(formData.monthly_payment) : 0,
+      payment_day: formData.payment_day ? Number(formData.payment_day) : undefined,
     });
   };
 
@@ -171,6 +236,88 @@ export default function StudentForm({ student, onSubmit, onCancel, theme }) {
             onChange={(e) => setFormData({ ...formData, birthday_month: e.target.value })}
             placeholder="MM"
             className={inputClass}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="monthly_payment" className={labelClass}>Mensalidade (R$)</Label>
+          <Input
+            id="monthly_payment"
+            type="number"
+            min="0"
+            step="0.01"
+            value={formData.monthly_payment || ''}
+            onChange={(e) => setFormData({ ...formData, monthly_payment: e.target.value })}
+            placeholder="0,00"
+            className={inputClass}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="payment_day" className={labelClass}>Dia de vencimento</Label>
+          <Input
+            id="payment_day"
+            type="number"
+            min="1"
+            max="31"
+            value={formData.payment_day || ''}
+            onChange={(e) => setFormData({ ...formData, payment_day: e.target.value })}
+            placeholder="Ex: 5"
+            className={inputClass}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="payment_status" className={labelClass}>Status do pagamento</Label>
+          <Select
+            value={formData.payment_status || 'pending'}
+            onValueChange={(value) => setFormData({ ...formData, payment_status: value })}
+          >
+            <SelectTrigger className={inputClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pendente</SelectItem>
+              <SelectItem value="paid">Pago</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="student_status" className={labelClass}>Status do aluno</Label>
+          <Select
+            value={formData.student_status || 'active'}
+            onValueChange={(value) => setFormData({ ...formData, student_status: value })}
+          >
+            <SelectTrigger className={inputClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Ativo</SelectItem>
+              <SelectItem value="inactive">Inativo</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="last_payment_date" className={labelClass}>Último pagamento</Label>
+          <Input
+            id="last_payment_date"
+            type="date"
+            value={formData.last_payment_date || ''}
+            onChange={(e) => setFormData({ ...formData, last_payment_date: e.target.value })}
+            className={inputClass}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="next_payment_date" className={labelClass}>Próximo vencimento</Label>
+          <Input
+            id="next_payment_date"
+            type="date"
+            value={formData.next_payment_date || ''}
+            readOnly
+            className={`${inputClass} bg-slate-100 text-slate-600 cursor-not-allowed dark:bg-slate-800 dark:text-slate-300`}
           />
         </div>
 

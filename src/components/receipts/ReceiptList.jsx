@@ -1,10 +1,8 @@
-import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Trash2, Calendar, DollarSign } from "lucide-react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 
 const paymentMethodLabels = {

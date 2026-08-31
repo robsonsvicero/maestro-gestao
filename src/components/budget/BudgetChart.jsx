@@ -1,6 +1,5 @@
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { BarChart3 } from "lucide-react";
 
 const COLORS = ['#094C7E', '#0A5A94', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
@@ -16,7 +15,7 @@ const categoryLabels = {
   other: "Outros"
 };
 
-export default function BudgetChart({ budget, categoryTotals }) {
+export default function BudgetChart({ budget: _budget, categoryTotals }) {
   const data = Object.entries(categoryTotals).map(([category, amount]) => ({
     name: categoryLabels[category] || category,
     value: amount

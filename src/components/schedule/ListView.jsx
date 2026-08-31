@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import LessonCard from "./LessonCard";
 
@@ -16,10 +16,14 @@ export default function ListView({ lessons, onEdit, onDelete, onStatusChange, th
     const matchesStatus = statusFilter === "all" || lesson.status === statusFilter;
     return matchesSearch && matchesStatus;
   }).sort((a, b) => {
-    // Sort by date and time
-    const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
+    const aDate = a.date ? new Date(a.date).getTime() : 0;
+    const bDate = b.date ? new Date(b.date).getTime() : 0;
+    const dateCompare = bDate - aDate;
     if (dateCompare !== 0) return dateCompare;
-    return b.start_time.localeCompare(a.start_time);
+
+    const aTime = a.start_time || '23:59';
+    const bTime = b.start_time || '23:59';
+    return bTime.localeCompare(aTime);
   });
 
   if (isLoading) {

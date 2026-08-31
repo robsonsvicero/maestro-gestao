@@ -1,19 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
-  TrendingUp, 
-  TrendingDown, 
-  Wallet, 
-  Calendar,
+  Wallet,
   Users,
   Plus,
   ArrowUpRight,
   ArrowDownRight
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -73,7 +69,7 @@ export default function Dashboard() {
   const monthTransactions = getMonthTransactions();
   const yearTransactions = getYearTransactions();
   const monthTotals = calculateTotals(monthTransactions);
-  const yearTotals = calculateTotals(yearTransactions);
+  void yearTransactions;
 
   return (
     <div className="p-4 md:p-8 space-y-8">

@@ -1,27 +1,21 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Settings as SettingsIcon, Mail, Shield, Clock, Plus, Trash2, CalendarCheck, Upload, Image } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Settings as SettingsIcon, CalendarCheck, Upload, Image, Lock } from "lucide-react";
 
 export default function Settings() {
   const queryClient = useQueryClient();
-  const [currentUser, setCurrentUser] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  const { data: settings = [], isLoading } = useQuery({
+  const { data: settings = [], isLoading: _isLoading } = useQuery({
     queryKey: ['appSettings'],
     queryFn: () => base44.entities.AppSettings.list(),
-  });
-
-  const { data: users = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => base44.entities.User.list(),
   });
 
   const [formData, setFormData] = useState({
@@ -29,21 +23,30 @@ export default function Settings() {
     logo_url: "",
     google_calendar_email: "",
     sync_with_google_calendar: false,
-    admin_email: "",
     teacher_phone: "",
+    cpf_cnpj: "",
     default_lesson_duration: 60,
-    available_hours: {
-      monday: [],
-      tuesday: [],
-      wednesday: [],
-      thursday: [],
-      friday: [],
-      saturday: [],
-      sunday: []
-    }
+  });
+
+  const [passwordForm, setPasswordForm] = useState({
+    password: "",
+    confirmPassword: "",
+  });
+
+  const [passwordFeedback, setPasswordFeedback] = useState({
+    type: "",
+    message: "",
   });
 
   useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        await base44.auth.me();
+      } catch {
+        console.error("Error loading user:");
+      }
+    };
+
     loadCurrentUser();
   }, []);
 
@@ -54,30 +57,12 @@ export default function Settings() {
         logo_url: settings[0].logo_url || "",
         google_calendar_email: settings[0].google_calendar_email || "",
         sync_with_google_calendar: settings[0].sync_with_google_calendar || false,
-        admin_email: settings[0].admin_email || "",
         teacher_phone: settings[0].teacher_phone || "",
+        cpf_cnpj: settings[0].cpf_cnpj || "",
         default_lesson_duration: settings[0].default_lesson_duration || 60,
-        available_hours: settings[0].available_hours || {
-          monday: [],
-          tuesday: [],
-          wednesday: [],
-          thursday: [],
-          friday: [],
-          saturday: [],
-          sunday: []
-        }
       });
     }
   }, [settings]);
-
-  const loadCurrentUser = async () => {
-    try {
-      const user = await base44.auth.me();
-      setCurrentUser(user);
-    } catch (error) {
-      console.error("Error loading user:", error);
-    }
-  };
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -87,24 +72,47 @@ export default function Settings() {
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       setFormData({ ...formData, logo_url: file_url });
+      // Limpar o input file
+      e.target.value = "";
+      alert("Logo enviado com sucesso! Clique em 'Salvar Configurações' para confirmar.");
     } catch (error) {
-      alert("Erro ao fazer upload do logo");
+      const errorMessage = error?.message || "Erro ao fazer upload do logo";
+      alert(errorMessage);
+      console.error("Upload error:", error);
     } finally {
       setUploading(false);
     }
   };
 
+  const [saveFeedback, setSaveFeedback] = useState({
+    type: "",
+    message: "",
+  });
+
   const updateMutation = useMutation({
     mutationFn: async (data) => {
-      if (settings.length > 0) {
-        return base44.entities.AppSettings.update(settings[0].id, data);
-      } else {
-        return base44.entities.AppSettings.create(data);
+      const { data: existingRows, error: rowsError } = await supabase
+        .from('app_settings')
+        .select('id')
+        .limit(10);
+
+      if (rowsError) throw rowsError;
+
+      const targetRow = settings[0] ?? existingRows?.[0];
+
+      if (targetRow?.id) {
+        return base44.entities.AppSettings.update(targetRow.id, data);
       }
+
+      return base44.entities.AppSettings.create(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['appSettings']);
-      window.location.reload();
+      setSaveFeedback({ type: "success", message: "Configurações salvas com sucesso!" });
+      queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+      setTimeout(() => setSaveFeedback({ type: "", message: "" }), 3000);
+    },
+    onError: (error) => {
+      setSaveFeedback({ type: "error", message: error.message || "Erro ao salvar configurações" });
     },
   });
 
@@ -113,61 +121,41 @@ export default function Settings() {
     updateMutation.mutate(formData);
   };
 
-  const addTimeSlot = (day) => {
-    setFormData({
-      ...formData,
-      available_hours: {
-        ...formData.available_hours,
-        [day]: [...formData.available_hours[day], { start: "09:00", end: "10:00" }]
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
+
+    if (!passwordForm.password || !passwordForm.confirmPassword) {
+      setPasswordFeedback({ type: "error", message: "Preencha os dois campos de senha." });
+      return;
+    }
+
+    if (passwordForm.password.length < 6) {
+      setPasswordFeedback({ type: "error", message: "A nova senha deve ter pelo menos 6 caracteres." });
+      return;
+    }
+
+    if (passwordForm.password !== passwordForm.confirmPassword) {
+      setPasswordFeedback({ type: "error", message: "As senhas não coincidem." });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: passwordForm.password });
+
+      if (error) {
+        throw error;
       }
-    });
-  };
 
-  const removeTimeSlot = (day, index) => {
-    const newSlots = [...formData.available_hours[day]];
-    newSlots.splice(index, 1);
-    setFormData({
-      ...formData,
-      available_hours: {
-        ...formData.available_hours,
-        [day]: newSlots
-      }
-    });
+      setPasswordForm({ password: "", confirmPassword: "" });
+      setPasswordFeedback({
+        type: "success",
+        message: "Tudo certo! Sua senha foi atualizada com sucesso.",
+      });
+    } catch (error) {
+      const message = error?.message || "Não foi possível alterar a senha.";
+      setPasswordFeedback({ type: "error", message });
+    }
   };
-
-  const updateTimeSlot = (day, index, field, value) => {
-    const newSlots = [...formData.available_hours[day]];
-    newSlots[index][field] = value;
-    setFormData({
-      ...formData,
-      available_hours: {
-        ...formData.available_hours,
-        [day]: newSlots
-      }
-    });
-  };
-
-  const dayLabels = {
-    monday: "Segunda-feira",
-    tuesday: "Terça-feira",
-    wednesday: "Quarta-feira",
-    thursday: "Quinta-feira",
-    friday: "Sexta-feira",
-    saturday: "Sábado",
-    sunday: "Domingo"
-  };
-
-  if (currentUser?.role !== 'admin') {
-    return (
-      <div className="p-4 md:p-8">
-        <Card className="p-12 shadow-xl">
-          <p className="text-center text-slate-500">
-            Acesso negado. Apenas administradores podem acessar as configurações.
-          </p>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -217,6 +205,18 @@ export default function Settings() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="cpf_cnpj">
+                CPF ou CNPJ
+              </Label>
+              <Input
+                id="cpf_cnpj"
+                value={formData.cpf_cnpj}
+                onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
+                placeholder="Digite o CPF ou CNPJ"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label>Logo da Escola/Professor</Label>
               <div className="flex items-center gap-4">
                 {formData.logo_url ? (
@@ -229,7 +229,7 @@ export default function Settings() {
                 <div className="flex-1">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
                     onChange={handleLogoUpload}
                     className="hidden"
                     id="logo-upload"
@@ -320,101 +320,69 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Horários Disponíveis */}
         <Card className="shadow-xl">
           <CardHeader className="border-b">
             <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-[#094C7E]" />
-              Horários Disponíveis
+              <Lock className="w-5 h-5 text-[#094C7E]" />
+              Segurança da conta
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            {Object.entries(dayLabels).map(([day, label]) => (
-              <div key={day} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>{label}</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => addTimeSlot(day)}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Adicionar Horário
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {formData.available_hours[day].map((slot, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Input
-                        type="time"
-                        value={slot.start}
-                        onChange={(e) => updateTimeSlot(day, index, 'start', e.target.value)}
-                        className="flex-1"
-                      />
-                      <span className="text-slate-600 dark:text-slate-400">até</span>
-                      <Input
-                        type="time"
-                        value={slot.end}
-                        onChange={(e) => updateTimeSlot(day, index, 'end', e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeTimeSlot(day, index)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  {formData.available_hours[day].length === 0 && (
-                    <p className="text-sm text-slate-400">
-                      Nenhum horário configurado
-                    </p>
-                  )}
-                </div>
+          <CardContent className="pt-6">
+            <form onSubmit={handlePasswordUpdate} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new_password">Nova senha</Label>
+                <Input
+                  id="new_password"
+                  type="password"
+                  value={passwordForm.password}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
+                  placeholder="Digite a nova senha"
+                />
               </div>
-            ))}
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm_password">Confirmar nova senha</Label>
+                <Input
+                  id="confirm_password"
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  placeholder="Confirme a nova senha"
+                />
+              </div>
+
+              {passwordFeedback.message && (
+                <div
+                  className={
+                    passwordFeedback.type === 'success'
+                      ? 'rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700'
+                      : 'rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700'
+                  }
+                >
+                  {passwordFeedback.message}
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <Button type="submit" variant="outline" className="border-[#094C7E] text-[#094C7E] hover:bg-[#094C7E] hover:text-white">
+                  Alterar senha
+                </Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
 
-        {/* Administrador */}
-        <Card className="shadow-xl">
-          <CardHeader className="border-b">
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-[#094C7E]" />
-              Administrador
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="admin_email">
-                Email do Administrador
-              </Label>
-              <Select
-                value={formData.admin_email}
-                onValueChange={(value) => setFormData({ ...formData, admin_email: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um usuário" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map(user => (
-                    <SelectItem key={user.id} value={user.email}>
-                      {user.full_name} ({user.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-slate-500">
-                Selecione qual usuário será o administrador do aplicativo.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {saveFeedback.message && (
+          <div
+            className={
+              saveFeedback.type === 'success'
+                ? 'rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700'
+                : 'rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700'
+            }
+          >
+            {saveFeedback.message}
+          </div>
+        )}
 
         <div className="flex justify-end">
           <Button 

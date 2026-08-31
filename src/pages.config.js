@@ -8,6 +8,7 @@ import Schedule from './pages/Schedule';
 import AutoSchedule from './pages/AutoSchedule';
 import MyHours from './pages/MyHours';
 import Budget from './pages/Budget';
+import Login from './pages/Login';
 import __Layout from './Layout.jsx';
 
 export const PAGES = {
@@ -21,6 +22,7 @@ export const PAGES = {
     "AutoSchedule": AutoSchedule,
     "MyHours": MyHours,
     "Budget": Budget,
+    "Login": Login,
 }
 
 export const pagesConfig = {
