@@ -27,6 +27,7 @@ import {
   SidebarFooter,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 
@@ -39,6 +40,20 @@ const navigationItems = [
   { title: "Alunos", url: createPageUrl("Students"), icon: Users },
   { title: "Recibos", url: createPageUrl("Receipts"), icon: ReceiptIcon },
 ];
+
+function NavigationLink({ to, children, className }) {
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  return (
+    <Link
+      to={to}
+      onClick={() => isMobile && setOpenMobile(false)}
+      className={className}
+    >
+      {children}
+    </Link>
+  );
+}
 
 /** @param {{ children: React.ReactNode, currentPageName?: string }} props */
 export default function Layout({ children, currentPageName: _currentPageName }) {
@@ -164,10 +179,10 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                               : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                           }`}
                         >
-                          <Link to={item.url} className="flex items-center gap-3 px-4 py-3">
+                          <NavigationLink to={item.url} className="flex items-center gap-3 px-4 py-3">
                             <item.icon className="w-5 h-5" />
                             <span className="font-medium">{item.title}</span>
-                          </Link>
+                          </NavigationLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
@@ -181,10 +196,10 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                           : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                       }`}
                     >
-                      <Link to={createPageUrl("Settings")} className="flex items-center gap-3 px-4 py-3">
+                      <NavigationLink to={createPageUrl("Settings")} className="flex items-center gap-3 px-4 py-3">
                         <Settings className="w-5 h-5" />
                         <span className="font-medium">Configurações</span>
-                      </Link>
+                      </NavigationLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
