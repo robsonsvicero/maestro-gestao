@@ -227,7 +227,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
           </SidebarFooter>
         </Sidebar>
 
-        <main className="flex-1 flex flex-col">
+        <main className="flex min-w-0 flex-1 flex-col">
           <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 lg:hidden no-print">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">

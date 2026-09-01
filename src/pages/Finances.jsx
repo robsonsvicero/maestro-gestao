@@ -280,7 +280,7 @@ export default function Finances() {
   }, { income: 0, expenses: 0 });
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
+    <div className="w-full max-w-none space-y-6 p-4 md:p-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-slate-100 mb-2">Finanças</h1>
@@ -298,7 +298,7 @@ export default function Finances() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid w-full gap-4 md:grid-cols-3">
         <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-0 shadow-lg">
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Total de Receitas</p>
           <p className="text-3xl font-bold text-green-600 dark:text-green-400">R$ {totals.income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
@@ -315,7 +315,7 @@ export default function Finances() {
         </Card>
       </div>
 
-      <Card className="p-4 shadow-sm">
+      <Card className="w-full p-4 shadow-sm">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="finance-month">Mês</Label>
@@ -462,7 +462,7 @@ export default function Finances() {
         </Card>
       )}
 
-      <div className="rounded-lg border bg-white p-4 dark:bg-slate-800">
+      <div className="w-full min-w-0 rounded-lg border bg-white p-4 dark:bg-slate-800">
         <div className="mb-4 flex items-center justify-between gap-3">
           <p className="text-sm text-slate-500">Lista de transações ({filteredTransactions.length})</p>
         </div>
@@ -472,8 +472,8 @@ export default function Finances() {
           <p className="mt-3 text-slate-500">Nenhuma transação registrada.</p>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-left text-sm">
+            <div className="-mx-4 overflow-x-auto px-4 pb-2 overscroll-x-contain">
+              <table className="w-full min-w-[960px] text-left text-sm">
                 <thead className="border-y bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
                   <tr>
                     {[
