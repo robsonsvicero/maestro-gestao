@@ -174,13 +174,23 @@ export default function StudentForm({ student, onSubmit, onCancel, theme, isSubm
 
         <div className="space-y-2">
           <Label htmlFor="lesson_day" className={labelClass}>Dia da Aula</Label>
-          <Input
-            id="lesson_day"
+          <Select
             value={formData.lesson_day || ''}
-            onChange={(e) => setFormData({ ...formData, lesson_day: e.target.value })}
-            placeholder="Ex: Terça-feira"
-            className={inputClass}
-          />
+            onValueChange={(value) => setFormData({ ...formData, lesson_day: value })}
+          >
+            <SelectTrigger id="lesson_day" className={inputClass}>
+              <SelectValue placeholder="Selecione o dia" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="segunda-feira">Segunda-feira</SelectItem>
+              <SelectItem value="terça-feira">Terça-feira</SelectItem>
+              <SelectItem value="quarta-feira">Quarta-feira</SelectItem>
+              <SelectItem value="quinta-feira">Quinta-feira</SelectItem>
+              <SelectItem value="sexta-feira">Sexta-feira</SelectItem>
+              <SelectItem value="sábado">Sábado</SelectItem>
+              <SelectItem value="domingo">Domingo</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">

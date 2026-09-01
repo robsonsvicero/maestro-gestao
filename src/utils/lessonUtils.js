@@ -13,6 +13,30 @@ const calculateEndTime = (startTime, duration = 60) => {
   return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
 };
 
+/** Converts Portuguese or English weekday names to the JavaScript weekday. */
+export const getLessonDayOfWeek = (lessonDay) => {
+  if (typeof lessonDay !== 'string') return undefined;
+
+  const normalizedDay = lessonDay
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_-]+/g, '');
+
+  const dayMap = {
+    domingo: 0, sunday: 0,
+    segunda: 1, segundafeira: 1, monday: 1,
+    terca: 2, tercafeira: 2, tuesday: 2,
+    quarta: 3, quartafeira: 3, wednesday: 3,
+    quinta: 4, quintafeira: 4, thursday: 4,
+    sexta: 5, sextafeira: 5, friday: 5,
+    sabado: 6, saturday: 6,
+  };
+
+  return dayMap[normalizedDay];
+};
+
 /**
  * Gera 52 agendamentos semanais para um aluno ativo.
  * @returns {Promise<Array>} Aulas criadas
@@ -22,16 +46,7 @@ export const generateAutomaticLessons = async (student, base44) => {
     return [];
   }
 
-  const dayMap = {
-    'segunda-feira': 1, segunda: 1,
-    'terça-feira': 2, terça: 2,
-    'quarta-feira': 3, quarta: 3,
-    'quinta-feira': 4, quinta: 4,
-    'sexta-feira': 5, sexta: 5,
-    sábado: 6, sabado: 6,
-    domingo: 0,
-  };
-  const targetDayOfWeek = dayMap[student.lesson_day.toLowerCase().trim()];
+  const targetDayOfWeek = getLessonDayOfWeek(student.lesson_day);
 
   if (targetDayOfWeek === undefined) {
     throw new Error('Dia da aula inválido para o agendamento automático.');

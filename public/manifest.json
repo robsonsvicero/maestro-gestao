@@ -1,0 +1,9 @@
+{
+  "name": "Gestão Musical",
+  "short_name": "Gestão Musical",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#094C7E",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
