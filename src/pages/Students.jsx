@@ -6,8 +6,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getNextPaymentDate, getPaymentStatus } from "@/utils/paymentUtils";
-import { generateAutomaticLessons, deleteFutureLessons } from "@/utils/lessonUtils";
+import { generateAutomaticLessons, deleteFutureLessons, getLessonDayOfWeek } from "@/utils/lessonUtils";
 import { getLocalDateString } from "@/utils/dateUtils";
 
 import StudentForm from "../components/students/StudentForm";
@@ -21,6 +22,7 @@ export default function Students() {
   const [selectedStudentForFees, setSelectedStudentForFees] = useState(null);
   const [previewReceipt, setPreviewReceipt] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("name");
   const queryClient = useQueryClient();
 
   const { data: students = [], isLoading } = useQuery({
@@ -244,6 +246,34 @@ export default function Students() {
     student.instrument?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const sortedStudents = [...filteredStudents].sort((firstStudent, secondStudent) => {
+    if (sortBy === 'lesson_day') {
+      const firstDay = getLessonDayOfWeek(firstStudent.lesson_day);
+      const secondDay = getLessonDayOfWeek(secondStudent.lesson_day);
+
+      if (firstDay !== undefined || secondDay !== undefined) {
+        if (firstDay === undefined) return 1;
+        if (secondDay === undefined) return -1;
+        if (firstDay !== secondDay) return firstDay - secondDay;
+      }
+    }
+
+    const fieldBySort = {
+      name: 'full_name',
+      level: 'level',
+      instrument: 'instrument',
+      lesson_day: 'lesson_day',
+    };
+    const field = fieldBySort[sortBy];
+    const firstValue = firstStudent[field] || '';
+    const secondValue = secondStudent[field] || '';
+
+    if (!firstValue && secondValue) return 1;
+    if (firstValue && !secondValue) return -1;
+    if (!firstValue && !secondValue) return 0;
+    return firstValue.localeCompare(secondValue, 'pt-BR', { sensitivity: 'base', numeric: true });
+  });
+
   if (selectedStudentForFees) {
     return (
       <div className="relative">
@@ -327,14 +357,27 @@ export default function Students() {
       )}
 
       <Card className="p-4 shadow-lg bg-white dark:bg-slate-800">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
-          <Input
-            placeholder="Buscar por nome ou instrumento..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100"
-          />
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
+            <Input
+              placeholder="Buscar por nome ou instrumento..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100"
+            />
+          </div>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger aria-label="Ordenar alunos" className="w-full sm:w-52 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100">
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Nome</SelectItem>
+              <SelectItem value="level">Nível</SelectItem>
+              <SelectItem value="instrument">Instrumento</SelectItem>
+              <SelectItem value="lesson_day">Dia da aula</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </Card>
 
@@ -346,7 +389,7 @@ export default function Students() {
             </Card>
           ))}
         </div>
-      ) : filteredStudents.length === 0 ? (
+      ) : sortedStudents.length === 0 ? (
         <Card className="p-12 shadow-xl bg-white dark:bg-slate-800">
           <p className="text-center text-slate-500 dark:text-slate-400">
             Nenhum aluno encontrado
@@ -354,7 +397,7 @@ export default function Students() {
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredStudents.map((student) => (
+          {sortedStudents.map((student) => (
             <StudentCard
               key={student.id}
               student={student}
