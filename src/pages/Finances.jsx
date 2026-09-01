@@ -472,7 +472,7 @@ export default function Finances() {
           <p className="mt-3 text-slate-500">Nenhuma transação registrada.</p>
         ) : (
           <>
-            <div className="-mx-4 overflow-x-auto px-4 pb-2 overscroll-x-contain">
+            <div className="-mx-4 overflow-x-scroll px-4 pb-3 overscroll-x-contain">
               <table className="w-full min-w-[960px] text-left text-sm">
                 <thead className="border-y bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
                   <tr>
