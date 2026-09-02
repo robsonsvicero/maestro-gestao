@@ -1,10 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const headers = { 'content-type': 'application/json; charset=utf-8' };
+const headers = {
+  'content-type': 'application/json; charset=utf-8',
+  'access-control-allow-origin': '*',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+  'access-control-allow-methods': 'POST, OPTIONS',
+};
 const reply = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), { status, headers });
 
 Deno.serve(async (request) => {
+  if (request.method === 'OPTIONS') return new Response('ok', { headers });
   if (request.method !== 'POST') return reply(405, { error: 'Method not allowed' });
 
   const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
