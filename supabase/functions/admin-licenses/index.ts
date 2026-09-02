@@ -16,6 +16,7 @@ Deno.serve(async (request) => {
   const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   const url = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const appUrl = Deno.env.get('APP_URL')?.replace(/\/$/, '');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
   if (!token || !url || !serviceRoleKey) return reply(401, { error: 'Unauthorized' });
 
@@ -49,7 +50,7 @@ Deno.serve(async (request) => {
 
     const { data: product, error: productError } = await admin
       .from('billing_products')
-      .select('id')
+      .select('id, auth_user_id')
       .eq('id', body.productId)
       .eq('active', true)
       .maybeSingle();
@@ -73,7 +74,27 @@ Deno.serve(async (request) => {
       updated_at: now,
     }, { onConflict: 'customer_id,product_id' });
     if (entitlementError) return reply(500, { error: entitlementError.message });
-    return reply(200, { ok: true });
+
+    let inviteSent = false;
+    let inviteWarning: string | null = null;
+    if (status === 'active' && !customer.auth_user_id) {
+      if (!appUrl) {
+        inviteWarning = 'Licença criada, mas o convite não foi enviado: configure o secret APP_URL.';
+      } else {
+        const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+          redirectTo: `${appUrl}/definir-senha`,
+          data: { full_name: body.name?.trim() || null },
+        });
+        if (inviteError) {
+          inviteWarning = /already (registered|exists)|already been registered/i.test(inviteError.message)
+            ? 'A licença foi criada, mas este e-mail já possui conta. Oriente o professor a usar “1º acesso” ou “Esqueci minha senha”.'
+            : 'A licença foi criada, mas não foi possível enviar o convite por e-mail.';
+        } else {
+          inviteSent = true;
+        }
+      }
+    }
+    return reply(200, { ok: true, invite_sent: inviteSent, invite_warning: inviteWarning });
   }
 
   if (body.action === 'update_license' || body.action === 'revoke' || body.action === 'activate') {
