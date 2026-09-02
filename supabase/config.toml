@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.start-trial]
 verify_jwt = false
+
+[functions.first-access]
+verify_jwt = false
