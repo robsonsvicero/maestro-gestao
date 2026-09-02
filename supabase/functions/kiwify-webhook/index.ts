@@ -126,7 +126,7 @@ Deno.serve(async (request) => {
 
   const { data: currentCustomer } = await supabase
     .from('billing_customers')
-    .select('id')
+    .select('id, auth_user_id')
     .eq('email', email)
     .maybeSingle();
   const customerPayload = {
@@ -203,6 +203,22 @@ Deno.serve(async (request) => {
     ...entitlementPayload,
   }, { onConflict: 'customer_id,product_id' });
   if (entitlementError) return fail(`Could not update entitlement: ${entitlementError.message}`);
+
+  // Na primeira compra aprovada, o Supabase envia um convite para o comprador
+  // definir a senha. Não é necessário exibir cadastro público para assinantes.
+  if (kind === 'approved' && !currentCustomer?.auth_user_id) {
+    const appUrl = Deno.env.get('APP_URL');
+    if (!appUrl) return fail('APP_URL secret is not configured');
+    const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${appUrl.replace(/\/$/, '')}/definir-senha`,
+      data: { full_name: payload.Customer?.full_name ?? null },
+    });
+    // É normal que o comprador já tenha uma conta, por exemplo após usar o
+    // teste gratuito. Nesse caso ele só precisa entrar com a senha existente.
+    if (inviteError && !/already (registered|exists)|already been registered/i.test(inviteError.message)) {
+      return fail(`Could not invite buyer: ${inviteError.message}`);
+    }
+  }
 
   await supabase.from('billing_webhook_events').update({
     processing_status: 'processed',

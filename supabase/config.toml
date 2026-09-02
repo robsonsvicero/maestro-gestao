@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.admin-licenses]
 verify_jwt = false
+
+[functions.start-trial]
+verify_jwt = false

@@ -95,15 +95,5 @@ Deno.serve(async (request) => {
     return reply(200, { status: 'active', access_type: 'trial', trial_ends_at: trial.ends_at });
   }
 
-  const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-  const { error: createTrialError } = await admin.from('billing_trials').insert({
-    auth_user_id: user.id,
-    email,
-    starts_at: now,
-    ends_at: trialEndsAt,
-    updated_at: now,
-  });
-  if (createTrialError) return reply(500, { error: 'Could not start trial access' });
-
-  return reply(200, { status: 'active', access_type: 'trial', trial_ends_at: trialEndsAt });
+  return reply(403, { status: 'no_active_license' });
 });

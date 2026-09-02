@@ -42,7 +42,8 @@ const AuthenticatedApp = () => {
     }
   }
 
-  if (!isAuthenticated && location.pathname !== '/login') {
+  const publicPaths = ['/login', '/teste-gratis', '/definir-senha'];
+  if (!isAuthenticated && !publicPaths.includes(location.pathname)) {
     return <Navigate to="/login" replace />;
   }
 
@@ -54,13 +55,15 @@ const AuthenticatedApp = () => {
     );
   }
 
-  if (isAuthenticated && accessStatus !== 'active' && location.pathname !== '/ativar-acesso') {
+  if (isAuthenticated && accessStatus !== 'active' && !['/ativar-acesso', '/teste-gratis', '/definir-senha'].includes(location.pathname)) {
     return <Navigate to="/ativar-acesso" replace />;
   }
 
   return (
     <Routes>
       <Route path="/login" element={<Pages.Login />} />
+      <Route path="/teste-gratis" element={<Pages.FreeTrial />} />
+      <Route path="/definir-senha" element={<Pages.SetPassword />} />
       <Route path="/ativar-acesso" element={<Pages.ActivateAccess />} />
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>

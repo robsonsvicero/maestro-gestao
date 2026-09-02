@@ -13,169 +13,26 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
-  const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) navigate('/', { replace: true });
-    };
+  useEffect(() => { supabase.auth.getSession().then(({ data }) => { if (data.session) navigate('/', { replace: true }); }); }, [navigate]);
 
-    checkSession();
-  }, [navigate]);
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError('');
-    setMessage('');
-    setIsSubmitting(true);
-
+  const submit = async (event) => {
+    event.preventDefault(); setError(''); setMessage(''); setIsSubmitting(true);
     if (isRecoveryMode) {
-      const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/Settings`,
-      });
-
+      const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/Settings` });
       setIsSubmitting(false);
-
-      if (recoveryError) {
-        setError(recoveryError.message || 'Não foi possível enviar o e-mail de recuperação.');
-        return;
-      }
-
-      setMessage('Se houver uma conta com este e-mail, você receberá as instruções para redefinir sua senha.');
+      if (recoveryError) setError(recoveryError.message || 'Não foi possível enviar o e-mail de recuperação.');
+      else setMessage('Se houver uma conta com este e-mail, você receberá as instruções para redefinir a senha.');
       return;
     }
-
-    if (isSignUpMode) {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: `${window.location.origin}/ativar-acesso` },
-      });
-      setIsSubmitting(false);
-      if (signUpError) {
-        setError(signUpError.message || 'Não foi possível criar sua conta.');
-        return;
-      }
-      if (data.session) {
-        navigate('/ativar-acesso', { replace: true });
-        return;
-      }
-      setMessage('Conta criada. Confirme o e-mail enviado para ativar o acesso.');
-      return;
-    }
-
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     setIsSubmitting(false);
-
-    if (signInError) {
-      setError(signInError.message || 'Não foi possível entrar.');
-      return;
-    }
-
-    if (data.session) {
-      navigate('/', { replace: true });
-    }
+    if (signInError) { setError(signInError.message || 'Não foi possível entrar.'); return; }
+    if (data.session) navigate('/', { replace: true });
   };
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12 dark:bg-slate-950">
-      <Card className="w-full max-w-md shadow-lg border-slate-200 dark:border-slate-800">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {isRecoveryMode ? 'Recuperar senha' : isSignUpMode ? 'Criar conta' : 'Entrar'}
-          </CardTitle>
-          <CardDescription className="text-slate-600 dark:text-slate-400">
-            {isRecoveryMode
-              ? 'Informe seu e-mail para receber as instruções de recuperação.'
-              : isSignUpMode ? 'Use o mesmo e-mail informado na compra pela Kiwify.' : 'Acesse sua conta para continuar no sistema.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </div>
-
-            {!isRecoveryMode && (<div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-                className="pr-10"
-              />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 text-slate-500 hover:bg-transparent hover:text-slate-700"
-                  onClick={() => setShowPassword((current) => !current)}
-                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-            )}
-
-            {error && (
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-            )}
-            {message && (
-              <p className="text-sm text-green-600 dark:text-green-400">{message}</p>
-            )}
-
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Aguarde...' : isRecoveryMode ? 'Enviar instruções' : isSignUpMode ? 'Criar conta' : 'Entrar'}
-            </Button>
-            <button
-              type="button"
-              className="w-full text-sm font-medium text-[#094C7E] hover:underline"
-              onClick={() => {
-                setIsRecoveryMode((current) => !current);
-                setIsSignUpMode(false);
-                setError('');
-                setMessage('');
-              }}
-            >
-              {isRecoveryMode ? 'Voltar para o login' : 'Esqueci minha senha'}
-            </button>
-            {!isRecoveryMode && (
-              <button
-                type="button"
-                className="w-full text-sm font-medium text-[#094C7E] hover:underline"
-                onClick={() => {
-                  setIsSignUpMode((current) => !current);
-                  setError('');
-                  setMessage('');
-                }}
-              >
-                {isSignUpMode ? 'Já tenho uma conta' : 'Criar conta após a compra'}
-              </button>
-            )}
-          </form>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12 dark:bg-slate-950"><Card className="w-full max-w-md border-slate-200 shadow-lg dark:border-slate-800"><CardHeader className="space-y-2"><CardTitle className="text-2xl font-bold">{isRecoveryMode ? 'Recuperar senha' : 'Entrar'}</CardTitle><CardDescription>{isRecoveryMode ? 'Informe seu e-mail para receber as instruções de recuperação.' : 'Use o mesmo e-mail informado na compra pela Kiwify.'}</CardDescription></CardHeader><CardContent><form className="space-y-4" onSubmit={submit}><div className="space-y-2"><Label htmlFor="email">E-mail</Label><Input id="email" type="email" placeholder="seu@email.com" value={email} onChange={(event) => setEmail(event.target.value)} required /></div>{!isRecoveryMode && <div className="space-y-2"><Label htmlFor="password">Senha</Label><div className="relative"><Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(event) => setPassword(event.target.value)} required className="pr-10" /><Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button></div></div>}{error && <p className="text-sm text-red-600">{error}</p>}{message && <p className="text-sm text-green-600">{message}</p>}<Button type="submit" className="w-full" disabled={isSubmitting}>{isSubmitting ? 'Aguarde...' : isRecoveryMode ? 'Enviar instruções' : 'Entrar'}</Button><button type="button" className="w-full text-sm font-medium text-[#094C7E] hover:underline" onClick={() => { setIsRecoveryMode((current) => !current); setError(''); setMessage(''); }}>{isRecoveryMode ? 'Voltar para o login' : 'Esqueci minha senha'}</button></form></CardContent></Card></div>;
 }

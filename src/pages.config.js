@@ -11,6 +11,8 @@ import Budget from './pages/Budget';
 import Login from './pages/Login';
 import ActivateAccess from './pages/ActivateAccess';
 import AdminLicenses from './pages/AdminLicenses';
+import FreeTrial from './pages/FreeTrial';
+import SetPassword from './pages/SetPassword';
 import __Layout from './Layout.jsx';
 
 export const PAGES = {
@@ -27,6 +29,8 @@ export const PAGES = {
     "Login": Login,
     "ActivateAccess": ActivateAccess,
     "AdminLicenses": AdminLicenses,
+    "FreeTrial": FreeTrial,
+    "SetPassword": SetPassword,
 }
 
 export const pagesConfig = {
