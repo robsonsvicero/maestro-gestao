@@ -44,11 +44,11 @@ Deno.serve(async (request) => {
     .maybeSingle();
   if (customerError) return reply(500, { error: 'Could not verify the customer record' });
 
-  if (!customer) return reply(403, { status: 'no_license' });
   if (customer?.auth_user_id && customer.auth_user_id !== user.id) {
     return reply(409, { status: 'license_already_linked' });
   }
 
+  let hasActiveLicense = false;
   if (customer) {
     const { data: entitlement, error: entitlementError } = await admin
       .from('billing_entitlements')
@@ -60,13 +60,14 @@ Deno.serve(async (request) => {
       .limit(1)
       .maybeSingle();
     if (entitlementError) return reply(500, { error: 'Could not verify entitlement' });
-    if (!entitlement) return reply(403, { status: 'no_active_license' });
-
-    const { error: linkError } = await admin
-      .from('billing_customers')
-      .update({ auth_user_id: user.id, updated_at: now })
-      .eq('id', customer.id);
-    if (linkError) return reply(500, { error: 'Could not link license to user' });
+    if (entitlement) {
+      const { error: linkError } = await admin
+        .from('billing_customers')
+        .update({ auth_user_id: user.id, updated_at: now })
+        .eq('id', customer.id);
+      if (linkError) return reply(500, { error: 'Could not link license to user' });
+      hasActiveLicense = true;
+    }
   }
 
   const { error: profileError } = await admin.from('profiles').upsert({
@@ -77,5 +78,32 @@ Deno.serve(async (request) => {
   }, { onConflict: 'id' });
   if (profileError) return reply(500, { error: 'Could not initialize user profile' });
 
-  return reply(200, { status: 'active', is_admin: isAdmin });
+  if (hasActiveLicense) return reply(200, { status: 'active', access_type: 'paid' });
+
+  const { data: trial, error: trialError } = await admin
+    .from('billing_trials')
+    .select('auth_user_id, email, ends_at')
+    .or(`auth_user_id.eq.${user.id},email.eq.${email}`)
+    .maybeSingle();
+  if (trialError) return reply(500, { error: 'Could not verify trial access' });
+
+  if (trial) {
+    if (trial.auth_user_id !== user.id) return reply(409, { status: 'trial_already_claimed' });
+    if (new Date(trial.ends_at).getTime() <= Date.now()) {
+      return reply(403, { status: 'trial_expired', trial_ends_at: trial.ends_at });
+    }
+    return reply(200, { status: 'active', access_type: 'trial', trial_ends_at: trial.ends_at });
+  }
+
+  const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const { error: createTrialError } = await admin.from('billing_trials').insert({
+    auth_user_id: user.id,
+    email,
+    starts_at: now,
+    ends_at: trialEndsAt,
+    updated_at: now,
+  });
+  if (createTrialError) return reply(500, { error: 'Could not start trial access' });
+
+  return reply(200, { status: 'active', access_type: 'trial', trial_ends_at: trialEndsAt });
 });

@@ -80,12 +80,26 @@ create table if not exists public.billing_webhook_events (
   processed_at timestamptz
 );
 
+-- Período gratuito único por conta/e-mail. A Edge Function cria este registro
+-- na primeira entrada de um professor que ainda não possui licença paga.
+create table if not exists public.billing_trials (
+  id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid not null unique references auth.users(id) on delete restrict,
+  email text not null unique,
+  starts_at timestamptz not null default now(),
+  ends_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (ends_at > starts_at)
+);
+
 create index if not exists billing_orders_customer_id_idx on public.billing_orders(customer_id);
 create index if not exists billing_subscriptions_customer_id_idx on public.billing_subscriptions(customer_id);
 create index if not exists billing_entitlements_customer_id_idx on public.billing_entitlements(customer_id);
 create unique index if not exists billing_entitlements_customer_product_key
   on public.billing_entitlements(customer_id, product_id);
 create index if not exists billing_webhook_events_status_idx on public.billing_webhook_events(processing_status, received_at desc);
+create index if not exists billing_trials_ends_at_idx on public.billing_trials(ends_at);
 
 alter table public.billing_products enable row level security;
 alter table public.billing_customers enable row level security;
@@ -93,6 +107,7 @@ alter table public.billing_orders enable row level security;
 alter table public.billing_subscriptions enable row level security;
 alter table public.billing_entitlements enable row level security;
 alter table public.billing_webhook_events enable row level security;
+alter table public.billing_trials enable row level security;
 
 -- O professor pode apenas consultar a própria licença; alterações ocorrem
 -- exclusivamente pela Edge Function com service_role.
@@ -108,7 +123,3 @@ using (
       and customer.auth_user_id = auth.uid()
   )
 );
-npx supabase secrets set KIWIFY_WEBHOOK_TOKEN="ogP0quQwbCQ8nzRxxyE3JL_xLq194QBTnG-C8qMvIgM"
-ogP0quQwbCQ8nzRxxyE3JL_xLq194QBTnG-C8qMvIgM
-
-https://ouffydkgqytzjmehtqjr.supabase.co/functions/v1/kiwify-webhook?token=ogP0quQwbCQ8nzRxxyE3JL_xLq194QBTnG-C8qMvIgM

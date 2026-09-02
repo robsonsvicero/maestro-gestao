@@ -31,6 +31,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/AuthContext";
 
 const navigationItems = [
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard },
@@ -60,6 +61,7 @@ function NavigationLink({ to, children, className }) {
 export default function Layout({ children, currentPageName: _currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { accessType, trialEndsAt } = useAuth();
   const [user, setUser] = useState(null);
   const [appSettings, setAppSettings] = useState(null);
 
@@ -123,6 +125,11 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
     if (!value) return "CPF / CNPJ";
     return value.replace(/\D/g, '').length <= 11 ? `CPF: ${value}` : `CNPJ: ${value}`;
   };
+
+  const trialDaysRemaining = trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+    : null;
+  const showTrialAlert = accessType === 'trial' && trialDaysRemaining !== null && trialDaysRemaining <= 4;
 
   return (
     <SidebarProvider>
@@ -258,6 +265,12 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
           </header>
 
           <div className="flex-1 overflow-auto bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
+            {showTrialAlert && (
+              <div className="mx-4 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100 md:mx-8">
+                <strong>Seu teste gratuito termina em {trialDaysRemaining} {trialDaysRemaining === 1 ? 'dia' : 'dias'}.</strong>{' '}
+                Assine o Maestro Gestão para continuar acessando após esse período.
+              </div>
+            )}
             {children}
           </div>
         </main>
