@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.activate-access]
 verify_jwt = false
+
+[functions.admin-licenses]
+verify_jwt = false

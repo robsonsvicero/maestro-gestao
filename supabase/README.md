@@ -46,3 +46,14 @@ supabase functions deploy activate-access --no-verify-jwt
 O professor cria uma conta com o mesmo e-mail usado na compra, confirma o
 e-mail e acessa `/ativar-acesso`. A função vincula a conta à licença ativa e o
 aplicativo só libera as telas internas depois dessa confirmação.
+
+## Administração de licenças
+
+Publique `admin-licenses` para habilitar a tela `/AdminLicenses`:
+
+```bash
+supabase functions deploy admin-licenses --no-verify-jwt
+```
+
+Ela exige `profiles.role = 'admin'` no servidor e permite consultar licenças e
+eventos, além de liberar ou revogar manualmente uma licença.

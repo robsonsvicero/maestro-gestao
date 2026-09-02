@@ -13,7 +13,8 @@ import {
   Settings,
   Calendar,
   Clock,
-  Sparkles
+  Sparkles,
+  KeyRound
 } from "lucide-react";
 import {
   Sidebar,
@@ -202,6 +203,23 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                       </NavigationLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  {user?.role === 'admin' && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        className={`rounded-xl transition-all duration-200 mb-1 ${
+                          location.pathname === createPageUrl("AdminLicenses")
+                            ? 'bg-gradient-to-r from-[#094C7E] to-[#0A5A94] text-white shadow-md hover:shadow-lg'
+                            : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <NavigationLink to={createPageUrl("AdminLicenses")} className="flex items-center gap-3 px-4 py-3">
+                          <KeyRound className="w-5 h-5" />
+                          <span className="font-medium">Licenças</span>
+                        </NavigationLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

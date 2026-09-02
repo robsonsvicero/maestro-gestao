@@ -10,6 +10,7 @@ import MyHours from './pages/MyHours';
 import Budget from './pages/Budget';
 import Login from './pages/Login';
 import ActivateAccess from './pages/ActivateAccess';
+import AdminLicenses from './pages/AdminLicenses';
 import __Layout from './Layout.jsx';
 
 export const PAGES = {
@@ -25,6 +26,7 @@ export const PAGES = {
     "Budget": Budget,
     "Login": Login,
     "ActivateAccess": ActivateAccess,
+    "AdminLicenses": AdminLicenses,
 }
 
 export const pagesConfig = {
