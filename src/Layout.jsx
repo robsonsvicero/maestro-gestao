@@ -120,11 +120,6 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
     navigate('/login');
   };
 
-  const formatDocument = (value) => {
-    if (!value) return "CPF / CNPJ";
-    return value.replace(/\D/g, '').length <= 11 ? `CPF: ${value}` : `CNPJ: ${value}`;
-  };
-
   const accessDaysRemaining = accessEndsAt
     ? Math.max(0, Math.ceil((new Date(accessEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : null;
@@ -151,27 +146,15 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
       <div className="min-h-screen flex w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
         <Sidebar className="border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 no-print transition-colors">
           <SidebarHeader className="border-b border-slate-200 dark:border-slate-800 p-4">
-            <div className="flex items-start gap-3">
-              {appSettings?.logo_url ? (
-                <img 
-                  src={appSettings.logo_url} 
-                  alt="Logo" 
-                  className="w-11 h-11 object-contain rounded-full border border-slate-200 bg-white p-1 shrink-0"
-                />
-              ) : (
-                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#094C7E] to-[#0A5A94] flex items-center justify-center shadow-lg shrink-0">
-                  <Music className="w-5 h-5 text-white" />
-                </div>
-              )}
-
-              <div className="min-w-0 flex-1">
-                <h2 className="font-bold text-sm leading-snug text-slate-900 dark:text-slate-100 break-words">
-                  {appSettings?.school_name || "Professor"}
-                </h2>
-                <div className="mt-1 text-[10px] font-medium text-slate-600 dark:text-slate-300 break-words">
-                  {formatDocument(appSettings?.cpf_cnpj)}
-                </div>
-              </div>
+            <div className="flex items-center gap-3">
+              <img
+                src="/logo_maeztro.webp"
+                alt="Logo MAEZTRO"
+                className="h-11 w-11 shrink-0 rounded-full object-contain"
+              />
+              <h2 className="font-bold text-base leading-tight text-slate-900 dark:text-slate-100">
+                MAEZTRO Gestão
+              </h2>
             </div>
           </SidebarHeader>
           
@@ -238,11 +221,29 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
 
           <SidebarFooter className="border-t border-slate-200 dark:border-slate-800 p-4">
             <div className="rounded-2xl border border-slate-200 bg-slate-100/80 p-3 dark:border-slate-700 dark:bg-slate-800/80">
-              <div className="mb-3 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                lOGADO
+              <div className="flex items-center gap-3">
+                {appSettings?.logo_url ? (
+                  <img
+                    src={appSettings.logo_url}
+                    alt={`Logo de ${appSettings.school_name || 'escola'}`}
+                    className="h-11 w-11 shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1 dark:border-slate-600"
+                  />
+                ) : (
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-400 dark:border-slate-600 dark:bg-slate-700">
+                    <Music className="h-5 w-5" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    {user?.full_name || "Professor"}
+                  </p>
+                  <p className="truncate text-xs text-slate-600 dark:text-slate-300">
+                    {user?.email || "usuario@exemplo.com"}
+                  </p>
+                </div>
               </div>
-              <p className="truncate text-sm text-slate-700 dark:text-slate-200">
-                {user?.email || "usuario@exemplo.com"}
+              <p className="mt-2 truncate text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                {appSettings?.school_name || "Escola de Música"}
               </p>
               <Button
                 variant="ghost"
@@ -257,11 +258,41 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
         </Sidebar>
 
         <main className="flex min-w-0 flex-1 flex-col">
-          <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 lg:hidden no-print">
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                {appSettings?.school_name || "Escola de Música"}
-              </h1>
+          <header className="border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900 lg:hidden no-print">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <img
+                  src="/logo_maeztro.webp"
+                  alt="Logo MAEZTRO"
+                  className="h-10 w-10 shrink-0 rounded-full object-contain"
+                />
+                <div className="min-w-0">
+                  <h1 className="truncate text-base font-bold text-slate-900 dark:text-slate-100">
+                    MAEZTRO Gestão
+                  </h1>
+                  <div className="mt-1 flex min-w-0 items-center gap-2">
+                    {appSettings?.logo_url && (
+                      <img
+                        src={appSettings.logo_url}
+                        alt={`Logo de ${appSettings.school_name || 'escola'}`}
+                        className="h-5 w-5 shrink-0 rounded-full border border-slate-200 object-contain dark:border-slate-600"
+                      />
+                    )}
+                    <span className="truncate text-xs text-slate-600 dark:text-slate-300">
+                      {user?.full_name || "Professor"} · {user?.email || "usuario@exemplo.com"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4" />
+                Sair
+              </Button>
             </div>
           </header>
 
@@ -297,15 +328,6 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                   </Link>
                 );
               })}
-              <button
-                type="button"
-                aria-label="Sair"
-                title="Sair"
-                onClick={handleLogout}
-                className="flex h-14 min-w-16 shrink-0 items-center justify-center rounded-xl px-3 text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
             </div>
             <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-12 items-center justify-end bg-gradient-to-l from-white via-white/95 to-transparent pr-2 dark:from-slate-900 dark:via-slate-900/95">
               <ChevronRight className="h-5 w-5 text-slate-400" />
