@@ -52,16 +52,17 @@ Deno.serve(async (request) => {
 
     const { data: product, error: productError } = await admin
       .from('billing_products')
-      .select('id, auth_user_id')
+      .select('id')
       .eq('id', body.productId)
       .eq('active', true)
       .maybeSingle();
-    if (productError || !product) return reply(400, { error: 'Produto não encontrado ou inativo.' });
+    if (productError) return reply(500, { error: `Falha ao consultar o produto: ${productError.message}` });
+    if (!product) return reply(400, { error: `Produto não encontrado ou inativo. ID recebido: ${body.productId}` });
 
     const { data: customer, error: customerError } = await admin
       .from('billing_customers')
       .upsert({ email, name: body.name?.trim() || null, phone: body.phone?.trim() || null, updated_at: now }, { onConflict: 'email' })
-      .select('id')
+      .select('id, auth_user_id')
       .single();
     if (customerError || !customer) return reply(500, { error: customerError?.message ?? 'Não foi possível criar o cliente.' });
 
