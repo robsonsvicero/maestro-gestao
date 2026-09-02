@@ -18,15 +18,18 @@ Deno.serve(async (request) => {
     auth: { persistSession: false },
   });
   const { data: { user }, error: userError } = await userClient.auth.getUser(token);
-  if (userError || !user?.email) return reply(401, { error: 'Invalid session' });
-  if (!user.email_confirmed_at) return reply(403, { status: 'email_confirmation_required' });
+  if (userError || !user) return reply(401, { error: 'Invalid session' });
 
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
-  const email = user.email.trim().toLowerCase();
-  const now = new Date().toISOString();
-
   const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).maybeSingle();
   const isAdmin = profile?.role === 'admin';
+  if (isAdmin) return reply(200, { status: 'active', is_admin: true });
+
+  if (!user.email) return reply(403, { status: 'email_required' });
+  if (!user.email_confirmed_at) return reply(403, { status: 'email_confirmation_required' });
+
+  const email = user.email.trim().toLowerCase();
+  const now = new Date().toISOString();
 
   const { data: customer, error: customerError } = await admin
     .from('billing_customers')
@@ -35,7 +38,7 @@ Deno.serve(async (request) => {
     .maybeSingle();
   if (customerError) return reply(500, { error: 'Could not verify the customer record' });
 
-  if (!customer && !isAdmin) return reply(403, { status: 'no_license' });
+  if (!customer) return reply(403, { status: 'no_license' });
   if (customer?.auth_user_id && customer.auth_user_id !== user.id) {
     return reply(409, { status: 'license_already_linked' });
   }
@@ -51,7 +54,7 @@ Deno.serve(async (request) => {
       .limit(1)
       .maybeSingle();
     if (entitlementError) return reply(500, { error: 'Could not verify entitlement' });
-    if (!entitlement && !isAdmin) return reply(403, { status: 'no_active_license' });
+    if (!entitlement) return reply(403, { status: 'no_active_license' });
 
     const { error: linkError } = await admin
       .from('billing_customers')

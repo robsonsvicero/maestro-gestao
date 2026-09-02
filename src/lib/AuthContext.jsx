@@ -25,7 +25,11 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('activate-access');
+      const { data, error } = await supabase.functions.invoke('activate-access', {
+        headers: {
+          Authorization: `Bearer ${sessionToCheck.access_token}`,
+        },
+      });
       if (error) throw error;
       const status = data?.status ?? 'no_license';
       setAccessStatus(status);
