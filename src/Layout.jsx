@@ -175,7 +175,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {navigationItems.map((item) => {
+                  {user?.role !== 'admin' && navigationItems.map((item) => {
                     const isActive = location.pathname === item.url;
                     return (
                       <SidebarMenuItem key={item.title}>
@@ -195,7 +195,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                       </SidebarMenuItem>
                     );
                   })}
-                  <SidebarMenuItem>
+                  {user?.role !== 'admin' && <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
                       className={`rounded-xl transition-all duration-200 mb-1 ${
@@ -209,7 +209,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                         <span className="font-medium">Configurações</span>
                       </NavigationLink>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  </SidebarMenuItem>}
                   {user?.role === 'admin' && (
                     <SidebarMenuItem>
                       <SidebarMenuButton
