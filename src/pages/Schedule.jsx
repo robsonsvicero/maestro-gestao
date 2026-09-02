@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Plus, Calendar as CalendarIcon, List, CalendarDays } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
@@ -175,8 +175,17 @@ Nos vemos em breve!
         </Button>
       </div>
 
-      {showForm && (
-        <Card className="p-6 shadow-xl bg-white dark:bg-slate-800">
+      <Sheet open={showForm} onOpenChange={setShowForm}>
+        <SheetContent
+          side="bottom"
+          className="max-h-[92vh] overflow-y-auto bg-white dark:bg-slate-800"
+        >
+          <SheetHeader className="mb-6 pr-8 text-left">
+            <SheetTitle>{editingLesson ? 'Editar aula' : 'Nova aula'}</SheetTitle>
+            <SheetDescription>
+              {editingLesson ? 'Altere os dados da aula agendada.' : 'Preencha os dados para agendar uma aula.'}
+            </SheetDescription>
+          </SheetHeader>
           <LessonForm
             lesson={editingLesson}
             students={students}
@@ -190,8 +199,8 @@ Nos vemos em breve!
             defaultDate={selectedDate}
             defaultStartTime={prefilledStartTime}
           />
-        </Card>
-      )}
+        </SheetContent>
+      </Sheet>
 
       <Tabs value={view} onValueChange={setView}>
         <TabsList className="bg-white dark:bg-slate-800 border dark:border-slate-700">

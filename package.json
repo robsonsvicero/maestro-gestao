@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && npx cap sync && cd android && gradlew.bat assembleDebug",
+    "build": "vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync",
+    "build:android": "npm run build && npx cap sync && cd android && gradlew.bat assembleDebug",
     "cap:android": "npm run cap:sync && npx cap open android"
   },
   "dependencies": {
