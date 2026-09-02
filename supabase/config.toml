@@ -1,0 +1,5 @@
+[functions.kiwify-webhook]
+verify_jwt = false
+
+[functions.activate-access]
+verify_jwt = false

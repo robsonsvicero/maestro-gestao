@@ -20,7 +20,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, accessStatus, navigateToLogin } = useAuth();
   const location = useLocation();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -46,9 +46,14 @@ const AuthenticatedApp = () => {
     return <Navigate to="/login" replace />;
   }
 
+  if (isAuthenticated && accessStatus !== 'active' && location.pathname !== '/ativar-acesso') {
+    return <Navigate to="/ativar-acesso" replace />;
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<Pages.Login />} />
+      <Route path="/ativar-acesso" element={<Pages.ActivateAccess />} />
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
           <MainPage />

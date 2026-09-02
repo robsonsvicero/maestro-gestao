@@ -9,6 +9,7 @@ import AutoSchedule from './pages/AutoSchedule';
 import MyHours from './pages/MyHours';
 import Budget from './pages/Budget';
 import Login from './pages/Login';
+import ActivateAccess from './pages/ActivateAccess';
 import __Layout from './Layout.jsx';
 
 export const PAGES = {
@@ -23,6 +24,7 @@ export const PAGES = {
     "MyHours": MyHours,
     "Budget": Budget,
     "Login": Login,
+    "ActivateAccess": ActivateAccess,
 }
 
 export const pagesConfig = {

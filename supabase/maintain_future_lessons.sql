@@ -22,7 +22,7 @@ declare
   inserted_count integer;
 begin
   for student_record in
-    select student.id, student.full_name, student.instrument, student.lesson_day, student.lesson_time
+    select student.id, student.full_name, student.instrument, student.lesson_day, student.lesson_time, student.user_id
     from public.student as student
     where student.student_status = 'active'
       and student.lesson_day is not null
@@ -54,6 +54,7 @@ begin
 
     while scheduled_date <= horizon loop
       insert into public.lesson (
+        user_id,
         student_id,
         student_name,
         instrument,
@@ -66,6 +67,7 @@ begin
         notes
       )
       select
+        student_record.user_id,
         student_record.id,
         student_record.full_name,
         student_record.instrument,

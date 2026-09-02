@@ -13,6 +13,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -48,6 +49,25 @@ export default function Login() {
       return;
     }
 
+    if (isSignUpMode) {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/ativar-acesso` },
+      });
+      setIsSubmitting(false);
+      if (signUpError) {
+        setError(signUpError.message || 'Não foi possível criar sua conta.');
+        return;
+      }
+      if (data.session) {
+        navigate('/ativar-acesso', { replace: true });
+        return;
+      }
+      setMessage('Conta criada. Confirme o e-mail enviado para ativar o acesso.');
+      return;
+    }
+
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -70,12 +90,12 @@ export default function Login() {
       <Card className="w-full max-w-md shadow-lg border-slate-200 dark:border-slate-800">
         <CardHeader className="space-y-2">
           <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {isRecoveryMode ? 'Recuperar senha' : 'Entrar'}
+            {isRecoveryMode ? 'Recuperar senha' : isSignUpMode ? 'Criar conta' : 'Entrar'}
           </CardTitle>
           <CardDescription className="text-slate-600 dark:text-slate-400">
             {isRecoveryMode
               ? 'Informe seu e-mail para receber as instruções de recuperação.'
-              : 'Acesse sua conta para continuar no sistema.'}
+              : isSignUpMode ? 'Use o mesmo e-mail informado na compra pela Kiwify.' : 'Acesse sua conta para continuar no sistema.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -126,19 +146,33 @@ export default function Login() {
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Aguarde...' : isRecoveryMode ? 'Enviar instruções' : 'Entrar'}
+              {isSubmitting ? 'Aguarde...' : isRecoveryMode ? 'Enviar instruções' : isSignUpMode ? 'Criar conta' : 'Entrar'}
             </Button>
             <button
               type="button"
               className="w-full text-sm font-medium text-[#094C7E] hover:underline"
               onClick={() => {
                 setIsRecoveryMode((current) => !current);
+                setIsSignUpMode(false);
                 setError('');
                 setMessage('');
               }}
             >
               {isRecoveryMode ? 'Voltar para o login' : 'Esqueci minha senha'}
             </button>
+            {!isRecoveryMode && (
+              <button
+                type="button"
+                className="w-full text-sm font-medium text-[#094C7E] hover:underline"
+                onClick={() => {
+                  setIsSignUpMode((current) => !current);
+                  setError('');
+                  setMessage('');
+                }}
+              >
+                {isSignUpMode ? 'Já tenho uma conta' : 'Criar conta após a compra'}
+              </button>
+            )}
           </form>
         </CardContent>
       </Card>
