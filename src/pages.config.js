@@ -13,6 +13,7 @@ import ActivateAccess from './pages/ActivateAccess';
 import AdminLicenses from './pages/AdminLicenses';
 import FreeTrial from './pages/FreeTrial';
 import SetPassword from './pages/SetPassword';
+import FirstAccess from './pages/FirstAccess';
 import __Layout from './Layout.jsx';
 
 export const PAGES = {
@@ -31,6 +32,7 @@ export const PAGES = {
     "AdminLicenses": AdminLicenses,
     "FreeTrial": FreeTrial,
     "SetPassword": SetPassword,
+    "FirstAccess": FirstAccess,
 }
 
 export const pagesConfig = {
