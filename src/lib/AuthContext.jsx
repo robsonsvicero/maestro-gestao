@@ -24,6 +24,7 @@ export function AuthProvider({ children }) {
       return 'idle';
     }
 
+    setAccessStatus('checking');
     try {
       const { data, error } = await supabase.functions.invoke('activate-access', {
         headers: {
@@ -72,6 +73,7 @@ export function AuthProvider({ children }) {
         setSession(nextSession ?? null);
         setIsLoadingAuth(false);
         if (nextSession) {
+          setAccessStatus('checking');
           setTimeout(() => refreshAccess(nextSession), 0);
         } else {
           setAccessStatus('idle');
