@@ -319,9 +319,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                 <LogOut className="h-5 w-5" />
               </button>
             </div>
-            <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-12 items-center justify-end bg-gradient-to-l from-white via-white/95 to-transparent pr-2 dark:from-slate-900 dark:via-slate-900/95">
-              <ChevronRight className="h-5 w-5 text-slate-400" />
-            </div>
+            
           </div>
         </nav>
       </div>
