@@ -24,9 +24,20 @@ const paymentStatusConfig = {
 
 export default function LessonCard({ lesson, onEdit, onDelete, onStatusChange, theme, showDate = false }) {
   return (
-    <Card className={`backdrop-blur-xl shadow-lg hover:shadow-xl transition-all ${
+    <Card
+      className={`cursor-pointer backdrop-blur-xl shadow-lg hover:shadow-xl transition-all ${
       theme === 'dark' ? 'bg-slate-800/60 border-slate-700' : 'bg-white/60 border-slate-200'
-    }`}>
+      }`}
+      onClick={onEdit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onEdit();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 space-y-3">
@@ -88,7 +99,7 @@ export default function LessonCard({ lesson, onEdit, onDelete, onStatusChange, t
           <div className="flex gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="icon" variant="outline">
+                <Button size="icon" variant="outline" onClick={(event) => event.stopPropagation()}>
                   <CheckCircle className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -110,7 +121,10 @@ export default function LessonCard({ lesson, onEdit, onDelete, onStatusChange, t
             <Button
               size="icon"
               variant="outline"
-              onClick={onEdit}
+              onClick={(event) => {
+                event.stopPropagation();
+                onEdit();
+              }}
               className="text-[#094C7E] hover:bg-blue-50"
             >
               <Pencil className="w-4 h-4" />
@@ -118,7 +132,10 @@ export default function LessonCard({ lesson, onEdit, onDelete, onStatusChange, t
             <Button
               size="icon"
               variant="outline"
-              onClick={onDelete}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete();
+              }}
               className="text-red-600 hover:bg-red-50"
             >
               <Trash2 className="w-4 h-4" />

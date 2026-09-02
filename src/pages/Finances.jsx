@@ -14,6 +14,11 @@ import { getLocalDateString, parseLocalDate } from "@/utils/dateUtils";
 const fallbackTransactions = [];
 
 const getTodayDate = () => getLocalDateString();
+const getDateDaysAgo = (days) => {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return getLocalDateString(date);
+};
 
 const paymentMethodLabels = {
   pix: 'PIX',
@@ -42,8 +47,8 @@ export default function Finances() {
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [formData, setFormData] = useState(emptyTransaction);
   const [selectedMonth, setSelectedMonth] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(() => getDateDaysAgo(6));
+  const [endDate, setEndDate] = useState(() => getTodayDate());
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
   const queryClient = useQueryClient();
