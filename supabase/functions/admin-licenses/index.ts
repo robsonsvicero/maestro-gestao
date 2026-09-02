@@ -6,8 +6,10 @@ const headers = {
   'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
   'access-control-allow-methods': 'POST, OPTIONS',
 };
-const reply = (status: number, body: Record<string, unknown>) =>
-  new Response(JSON.stringify(body), { status, headers });
+const reply = (status: number, body: Record<string, unknown>) => {
+  if (status >= 400) console.error(JSON.stringify({ status, ...body }));
+  return new Response(JSON.stringify(body), { status, headers });
+};
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers });
