@@ -181,13 +181,13 @@ export default function Settings() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="school_name">
-                  Nome da Escola/Professor
+                  Nome do Professor
                 </Label>
                 <Input
                   id="school_name"
                   value={formData.school_name}
                   onChange={(e) => setFormData({ ...formData, school_name: e.target.value })}
-                  placeholder="Ex: Escola de Música Harmonia"
+                  placeholder="Ex: Professor de Música João"
                   required
                 />
               </div>
@@ -217,7 +217,7 @@ export default function Settings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Logo da Escola/Professor</Label>
+              <Label>Logo do Professor</Label>
               <div className="flex items-center gap-4">
                 {formData.logo_url ? (
                   <img src={formData.logo_url} alt="Logo" className="w-20 h-20 object-contain rounded-lg border" />

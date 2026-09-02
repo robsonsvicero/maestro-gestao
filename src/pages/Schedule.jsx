@@ -75,7 +75,7 @@ ${data.price ? `Valor: R$ ${data.price.toFixed(2)}` : ''}
           // If student has email, send to their calendar too
           if (student?.email) {
             await base44.integrations.Core.SendEmail({
-              from_name: settings.school_name || "Escola de Música",
+              from_name: settings.school_name || "Professor de Música",
               to: student.email,
               subject: `Aula Agendada - ${data.instrument}`,
               body: `

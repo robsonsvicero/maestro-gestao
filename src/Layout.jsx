@@ -225,7 +225,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                 {appSettings?.logo_url ? (
                   <img
                     src={appSettings.logo_url}
-                    alt={`Logo de ${appSettings.school_name || 'escola'}`}
+                    alt={`Logo de ${appSettings.school_name || 'professor'}`}
                     className="h-11 w-11 shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1 dark:border-slate-600"
                   />
                 ) : (
@@ -243,7 +243,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                 </div>
               </div>
               <p className="mt-2 truncate text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                {appSettings?.school_name || "Escola de Música"}
+                {appSettings?.school_name || "Professor de Música"}
               </p>
               <Button
                 variant="ghost"
@@ -274,7 +274,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                     {appSettings?.logo_url && (
                       <img
                         src={appSettings.logo_url}
-                        alt={`Logo de ${appSettings.school_name || 'escola'}`}
+                        alt={`Logo de ${appSettings.school_name || 'professor'}`}
                         className="h-5 w-5 shrink-0 rounded-full border border-slate-200 object-contain dark:border-slate-600"
                       />
                     )}

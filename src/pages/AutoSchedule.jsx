@@ -60,7 +60,7 @@ export default function AutoSchedule() {
       if (selectedStudent.email) {
         const { error: emailError } = await supabase.functions.invoke('send-email', {
           body: {
-            from_name: settings.school_name || "Escola de Música",
+            from_name: settings.school_name || "Professor de Música",
             to: selectedStudent.email,
             subject: "Aula Agendada - Confirmação",
             body: `

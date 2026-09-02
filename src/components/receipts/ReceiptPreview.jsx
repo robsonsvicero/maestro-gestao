@@ -181,7 +181,7 @@ export default function ReceiptPreview({ receipt, companySettings, onClose, them
             <h1 className={`text-3xl font-bold mb-2 ${
               theme === 'dark' ? 'text-slate-100' : 'text-slate-900'
             }`}>
-              {companySettings?.school_name || "Escola de Música"}
+              {companySettings?.school_name || "Professor de Música"}
             </h1>
             <p className={`text-lg ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
               RECIBO DE PAGAMENTO
