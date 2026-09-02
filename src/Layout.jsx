@@ -14,6 +14,7 @@ import {
   Clock,
   Sparkles,
   KeyRound,
+  MoreHorizontal,
   ChevronRight
 } from "lucide-react";
 import {
@@ -124,9 +125,12 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
     ? Math.max(0, Math.ceil((new Date(accessEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : null;
   const showExpiryAlert = accessType && accessDaysRemaining !== null && accessDaysRemaining <= 4;
-  const mobileNavigationItems = user?.role === 'admin'
-    ? [{ title: 'Licenças', url: createPageUrl('AdminLicenses'), icon: KeyRound }]
-    : [...navigationItems, { title: 'Configurações', url: createPageUrl('Settings'), icon: Settings }];
+  const mobileNavigationItems = [
+    { title: 'Dashboard', url: createPageUrl('Dashboard'), icon: LayoutDashboard },
+    { title: 'Agenda', url: createPageUrl('Schedule'), icon: Calendar },
+    { title: 'Outros', url: createPageUrl('Outros'), icon: MoreHorizontal },
+    { title: 'Configurações', url: createPageUrl('Settings'), icon: Settings },
+  ];
 
   return (
     <SidebarProvider>
@@ -242,9 +246,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                   </p>
                 </div>
               </div>
-              {/* <p className="mt-2 truncate text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                {appSettings?.school_name || "Professor de Música"}
-              </p> */}
+              
               <Button
                 variant="ghost"
                 className="mt-3 w-full justify-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
@@ -270,29 +272,8 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                   <h1 className="truncate text-base font-bold text-slate-900 dark:text-slate-100">
                     MAEZTRO Gestão
                   </h1>
-                  <div className="mt-1 flex min-w-0 items-center gap-2">
-                    {appSettings?.logo_url && (
-                      <img
-                        src={appSettings.logo_url}
-                        alt={`Logo de ${appSettings.school_name || 'professor'}`}
-                        className="h-5 w-5 shrink-0 rounded-full border border-slate-200 object-contain dark:border-slate-600"
-                      />
-                    )}
-                    <span className="truncate text-xs text-slate-600 dark:text-slate-300">
-                      {user?.full_name || "Professor"} · {user?.email || "usuario@exemplo.com"}
-                    </span>
-                  </div>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="shrink-0 gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
-                onClick={handleLogout}
-              >
-                <LogOut className="h-4 w-4" />
-                Sair
-              </Button>
             </div>
           </header>
 
@@ -328,6 +309,15 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                   </Link>
                 );
               })}
+              <button
+                type="button"
+                aria-label="Sair"
+                title="Sair"
+                onClick={handleLogout}
+                className="flex h-14 min-w-16 shrink-0 items-center justify-center rounded-xl px-3 text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
             </div>
             <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-12 items-center justify-end bg-gradient-to-l from-white via-white/95 to-transparent pr-2 dark:from-slate-900 dark:via-slate-900/95">
               <ChevronRight className="h-5 w-5 text-slate-400" />
