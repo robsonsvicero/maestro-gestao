@@ -61,7 +61,7 @@ function NavigationLink({ to, children, className }) {
 export default function Layout({ children, currentPageName: _currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { accessType, trialEndsAt } = useAuth();
+  const { accessType, accessEndsAt } = useAuth();
   const [user, setUser] = useState(null);
   const [appSettings, setAppSettings] = useState(null);
 
@@ -126,10 +126,10 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
     return value.replace(/\D/g, '').length <= 11 ? `CPF: ${value}` : `CNPJ: ${value}`;
   };
 
-  const trialDaysRemaining = trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+  const accessDaysRemaining = accessEndsAt
+    ? Math.max(0, Math.ceil((new Date(accessEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : null;
-  const showTrialAlert = accessType === 'trial' && trialDaysRemaining !== null && trialDaysRemaining <= 4;
+  const showExpiryAlert = accessType && accessDaysRemaining !== null && accessDaysRemaining <= 4;
 
   return (
     <SidebarProvider>
@@ -265,10 +265,10 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
           </header>
 
           <div className="flex-1 overflow-auto bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
-            {showTrialAlert && (
+            {showExpiryAlert && (
               <div className="mx-4 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100 md:mx-8">
-                <strong>Seu teste gratuito termina em {trialDaysRemaining} {trialDaysRemaining === 1 ? 'dia' : 'dias'}.</strong>{' '}
-                Assine o Maestro Gestão para continuar acessando após esse período.
+                <strong>{accessType === 'trial' ? 'Seu teste gratuito' : 'Sua assinatura'} termina em {accessDaysRemaining} {accessDaysRemaining === 1 ? 'dia' : 'dias'}.</strong>{' '}
+                {accessType === 'trial' ? 'Assine o Maestro Gestão para continuar acessando após esse período.' : 'Renove sua assinatura para não perder o acesso.'}
               </div>
             )}
             {children}

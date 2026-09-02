@@ -49,10 +49,11 @@ Deno.serve(async (request) => {
   }
 
   let hasActiveLicense = false;
+  let activeEntitlement: { access_ends_at: string | null } | null = null;
   if (customer) {
     const { data: entitlement, error: entitlementError } = await admin
       .from('billing_entitlements')
-      .select('id')
+      .select('id, access_ends_at')
       .eq('customer_id', customer.id)
       .eq('status', 'active')
       .is('revoked_at', null)
@@ -67,6 +68,7 @@ Deno.serve(async (request) => {
         .eq('id', customer.id);
       if (linkError) return reply(500, { error: 'Could not link license to user' });
       hasActiveLicense = true;
+      activeEntitlement = entitlement;
     }
   }
 
@@ -78,7 +80,11 @@ Deno.serve(async (request) => {
   }, { onConflict: 'id' });
   if (profileError) return reply(500, { error: 'Could not initialize user profile' });
 
-  if (hasActiveLicense) return reply(200, { status: 'active', access_type: 'paid' });
+  if (hasActiveLicense) return reply(200, {
+    status: 'active',
+    access_type: 'paid',
+    access_ends_at: activeEntitlement?.access_ends_at ?? null,
+  });
 
   const { data: trial, error: trialError } = await admin
     .from('billing_trials')

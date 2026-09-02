@@ -9,6 +9,7 @@ const AuthContext = createContext({
   accessStatus: 'idle',
   accessType: null,
   trialEndsAt: null,
+  accessEndsAt: null,
   refreshAccess: async () => 'idle',
   navigateToLogin: () => {},
 });
@@ -20,6 +21,7 @@ export function AuthProvider({ children }) {
   const [accessStatus, setAccessStatus] = useState('idle');
   const [accessType, setAccessType] = useState(null);
   const [trialEndsAt, setTrialEndsAt] = useState(null);
+  const [accessEndsAt, setAccessEndsAt] = useState(null);
 
   const refreshAccess = async (currentSession) => {
     const sessionToCheck = currentSession ?? session;
@@ -27,6 +29,7 @@ export function AuthProvider({ children }) {
       setAccessStatus('idle');
       setAccessType(null);
       setTrialEndsAt(null);
+      setAccessEndsAt(null);
       return 'idle';
     }
 
@@ -42,6 +45,7 @@ export function AuthProvider({ children }) {
       setAccessStatus(status);
       setAccessType(data?.access_type ?? null);
       setTrialEndsAt(data?.trial_ends_at ?? null);
+      setAccessEndsAt(data?.access_ends_at ?? data?.trial_ends_at ?? null);
       return status;
     } catch (error) {
       console.error('Erro ao verificar licença:', error);
@@ -87,6 +91,7 @@ export function AuthProvider({ children }) {
           setAccessStatus('idle');
           setAccessType(null);
           setTrialEndsAt(null);
+          setAccessEndsAt(null);
         }
       }
     });
@@ -106,12 +111,13 @@ export function AuthProvider({ children }) {
       accessStatus,
       accessType,
       trialEndsAt,
+      accessEndsAt,
       refreshAccess,
       navigateToLogin: () => {
         window.location.href = '/login';
       },
     }),
-    [accessStatus, accessType, authError, isLoadingAuth, session, trialEndsAt]
+    [accessStatus, accessEndsAt, accessType, authError, isLoadingAuth, session, trialEndsAt]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
