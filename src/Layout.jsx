@@ -7,14 +7,14 @@ import {
   Wallet,
   Users,
   LogOut,
-  Menu,
   Music,
   Receipt as ReceiptIcon,
   Settings,
   Calendar,
   Clock,
   Sparkles,
-  KeyRound
+  KeyRound,
+  ChevronRight
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,7 +27,6 @@ import {
   SidebarHeader,
   SidebarFooter,
   SidebarProvider,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -130,6 +129,9 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
     ? Math.max(0, Math.ceil((new Date(accessEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : null;
   const showExpiryAlert = accessType && accessDaysRemaining !== null && accessDaysRemaining <= 4;
+  const mobileNavigationItems = user?.role === 'admin'
+    ? [{ title: 'Licenças', url: createPageUrl('AdminLicenses'), icon: KeyRound }]
+    : [...navigationItems, { title: 'Configurações', url: createPageUrl('Settings'), icon: Settings }];
 
   return (
     <SidebarProvider>
@@ -142,6 +144,8 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
             background: white !important;
           }
         }
+        .mobile-nav-scrollbar::-webkit-scrollbar { display: none; }
+        .mobile-nav-scrollbar { scrollbar-width: none; }
       `}</style>
       
       <div className="min-h-screen flex w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
@@ -255,16 +259,13 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
         <main className="flex min-w-0 flex-1 flex-col">
           <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 lg:hidden no-print">
             <div className="flex items-center gap-4">
-              <SidebarTrigger className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-                <Menu className="w-5 h-5" />
-              </SidebarTrigger>
               <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                 {appSettings?.school_name || "Escola de Música"}
               </h1>
             </div>
           </header>
 
-          <div className="flex-1 overflow-auto bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
+          <div className="flex-1 overflow-auto bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 pb-[calc(5.25rem+env(safe-area-inset-bottom))] dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 lg:pb-0">
             {showExpiryAlert && (
               <div className="mx-4 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100 md:mx-8">
                 <strong>{accessType === 'trial' ? 'Seu teste gratuito' : 'Sua assinatura'} termina em {accessDaysRemaining} {accessDaysRemaining === 1 ? 'dia' : 'dias'}.</strong>{' '}
@@ -274,6 +275,43 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
             {children}
           </div>
         </main>
+
+        <nav aria-label="Menu principal" className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,23,42,0.10)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 lg:hidden no-print">
+          <div className="relative">
+            <div className="mobile-nav-scrollbar flex h-20 items-center gap-1 overflow-x-auto px-2 pr-12">
+              {mobileNavigationItems.map((item) => {
+                const isActive = location.pathname === item.url;
+                return (
+                  <Link
+                    key={item.title}
+                    to={item.url}
+                    aria-label={item.title}
+                    title={item.title}
+                    className={`flex h-14 min-w-16 shrink-0 items-center justify-center rounded-xl px-3 transition-colors ${
+                      isActive
+                        ? 'bg-[#094C7E] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <item.icon className="h-5 w-5" />
+                  </Link>
+                );
+              })}
+              <button
+                type="button"
+                aria-label="Sair"
+                title="Sair"
+                onClick={handleLogout}
+                className="flex h-14 min-w-16 shrink-0 items-center justify-center rounded-xl px-3 text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            </div>
+            <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-12 items-center justify-end bg-gradient-to-l from-white via-white/95 to-transparent pr-2 dark:from-slate-900 dark:via-slate-900/95">
+              <ChevronRight className="h-5 w-5 text-slate-400" />
+            </div>
+          </div>
+        </nav>
       </div>
     </SidebarProvider>
   );

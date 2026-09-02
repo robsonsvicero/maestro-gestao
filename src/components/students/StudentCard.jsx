@@ -35,16 +35,16 @@ export default function StudentCard({
     <Card className="overflow-hidden border-slate-200 bg-white shadow-lg transition-all hover:shadow-xl dark:border-slate-700 dark:bg-slate-800">
       <div className="bg-gradient-to-r from-[#094C7E] to-[#0A5A94] p-4 text-white">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 text-lg font-bold">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/15 text-lg font-bold">
               {initials}
             </div>
-            <div>
-              <h3 className="font-semibold leading-tight">{student.full_name}</h3>
-              <p className="text-xs text-blue-100">{student.instrument || "Instrumento não informado"}</p>
+            <div className="min-w-0">
+              <h3 className="truncate font-semibold leading-tight">{student.full_name}</h3>
+              <p className="truncate text-xs text-blue-100">{student.instrument || "Instrumento não informado"}</p>
             </div>
           </div>
-          <div className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-medium uppercase tracking-wide">
+          <div className="shrink-0 rounded-full bg-white/10 px-2 py-1 text-[10px] font-medium uppercase tracking-wide">
             {student.level || "Iniciante"}
           </div>
         </div>
@@ -116,18 +116,18 @@ export default function StudentCard({
         )}
       </div>
 
-      <div className="flex items-center justify-end gap-2 border-t border-slate-200 p-4 dark:border-slate-700">
-        <Button variant="outline" size="sm" onClick={onOpenMonthlyFees}>
-          <CheckCircle className="mr-2 h-4 w-4" />
+      <div className="grid grid-cols-2 gap-2 border-t border-slate-200 p-4 dark:border-slate-700 md:grid-cols-3">
+        <Button variant="outline" size="sm" onClick={onOpenMonthlyFees} className="col-span-2 w-full min-w-0 px-2 md:col-span-1">
+          <CheckCircle className="mr-1.5 h-4 w-4 shrink-0" />
           Mensalidades
         </Button>
         
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Pencil className="mr-2 h-4 w-4" />
+        <Button variant="outline" size="sm" onClick={onEdit} className="w-full min-w-0 px-2">
+          <Pencil className="mr-1.5 h-4 w-4 shrink-0" />
           Editar
         </Button>
-        <Button variant="destructive" size="sm" onClick={onDelete}>
-          <Trash2 className="mr-2 h-4 w-4" />
+        <Button variant="destructive" size="sm" onClick={onDelete} className="w-full min-w-0 px-2">
+          <Trash2 className="mr-1.5 h-4 w-4 shrink-0" />
           Excluir
         </Button>
       </div>

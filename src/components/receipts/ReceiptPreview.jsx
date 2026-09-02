@@ -1,9 +1,15 @@
+import { useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, X } from "lucide-react";
+import { ArrowLeft, FileDown, Printer, Share2, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/utils/dateUtils";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
+import { Capacitor } from "@capacitor/core";
+import { Directory, Filesystem } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
 
 const paymentMethodLabels = {
   cash: "Dinheiro",
@@ -69,15 +75,65 @@ function amountToWords(amount) {
 }
 
 export default function ReceiptPreview({ receipt, companySettings, onClose, theme }) {
-  const handlePrint = () => {
-    if (onClose) onClose();
-    window.print();
+  const receiptRef = useRef(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const isNative = Capacitor.isNativePlatform();
+  const fileName = `recibo-${receipt.receipt_number || receipt.id || 'pagamento'}.pdf`;
+
+  const createPdf = async () => {
+    if (!receiptRef.current) throw new Error('Não foi possível localizar o recibo para gerar o PDF.');
+    const canvas = await html2canvas(receiptRef.current, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+    });
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 8;
+    const maxWidth = pageWidth - margin * 2;
+    const maxHeight = pageHeight - margin * 2;
+    const scale = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
+    const imageWidth = canvas.width * scale;
+    const imageHeight = canvas.height * scale;
+    const image = canvas.toDataURL('image/jpeg', 0.96);
+    pdf.addImage(
+      image,
+      'JPEG',
+      (pageWidth - imageWidth) / 2,
+      (pageHeight - imageHeight) / 2,
+      imageWidth,
+      imageHeight,
+    );
+    return pdf;
   };
 
-  const handleDownloadPdf = () => {
-    if (onClose) onClose();
-    window.print();
+  const handlePdf = async () => {
+    setIsExporting(true);
+    try {
+      const pdf = await createPdf();
+      if (!isNative) {
+        pdf.save(fileName);
+        return;
+      }
+
+      const data = pdf.output('datauristring').split(',')[1];
+      const saved = await Filesystem.writeFile({ path: fileName, data, directory: Directory.Documents });
+      await Share.share({
+        title: 'Recibo em PDF',
+        text: 'Recibo de pagamento',
+        url: saved.uri,
+        dialogTitle: 'Salvar, enviar ou imprimir recibo',
+      });
+    } catch (error) {
+      console.error('Erro ao gerar recibo em PDF:', error);
+      alert('Não foi possível gerar o PDF. Tente novamente.');
+    } finally {
+      setIsExporting(false);
+    }
   };
+
+  const handlePrint = () => isNative ? handlePdf() : window.print();
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -96,13 +152,13 @@ export default function ReceiptPreview({ receipt, companySettings, onClose, them
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
           </Button>
-          <Button variant="outline" onClick={handlePrint}>
+          <Button variant="outline" onClick={handlePrint} disabled={isExporting}>
             <Printer className="w-4 h-4 mr-2" />
-            Imprimir
+            {isNative ? 'Imprimir / Compartilhar' : 'Imprimir'}
           </Button>
-          <Button onClick={handleDownloadPdf} className="bg-gradient-to-r from-[#094C7E] to-[#0A5A94]">
-            <Printer className="w-4 h-4 mr-2" />
-            Baixar PDF
+          <Button onClick={handlePdf} disabled={isExporting} className="bg-gradient-to-r from-[#094C7E] to-[#0A5A94]">
+            {isNative ? <Share2 className="w-4 h-4 mr-2" /> : <FileDown className="w-4 h-4 mr-2" />}
+            {isExporting ? 'Gerando PDF...' : isNative ? 'Salvar / Compartilhar PDF' : 'Baixar PDF'}
           </Button>
           <Button
             type="button"
@@ -117,7 +173,7 @@ export default function ReceiptPreview({ receipt, companySettings, onClose, them
         </div>
       </div>
 
-      <Card className={`backdrop-blur-xl shadow-xl max-w-4xl mx-auto ${
+      <Card ref={receiptRef} className={`backdrop-blur-xl shadow-xl max-w-4xl mx-auto ${
         theme === 'dark' ? 'bg-slate-800/60 border-slate-700' : 'bg-white border-slate-200'
       }`}>
         <CardContent className="p-12">
