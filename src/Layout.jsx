@@ -242,9 +242,9 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                   </p>
                 </div>
               </div>
-              <p className="mt-2 truncate text-[10px] font-medium text-slate-500 dark:text-slate-400">
+              {/* <p className="mt-2 truncate text-[10px] font-medium text-slate-500 dark:text-slate-400">
                 {appSettings?.school_name || "Professor de Música"}
-              </p>
+              </p> */}
               <Button
                 variant="ghost"
                 className="mt-3 w-full justify-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
