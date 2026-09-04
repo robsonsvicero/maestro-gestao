@@ -45,6 +45,16 @@ const AppLoadingScreen = () => (
   </div>
 );
 
+const AppAccessLoadingScreen = () => (
+  <div className="flex min-h-screen items-center justify-center bg-white dark:bg-slate-950">
+    <img
+      src="/logo_maeztro.webp"
+      alt="MAEZTRO Gestão"
+      className="h-32 w-32 animate-pulse object-contain"
+    />
+  </div>
+);
+
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
@@ -74,7 +84,7 @@ const AuthenticatedApp = () => {
   }
 
   if (isAuthenticated && (accessStatus === 'idle' || accessStatus === 'checking')) {
-    return <AppLoadingScreen />;
+    return <AppAccessLoadingScreen />;
   }
 
   if (isAuthenticated && accessStatus !== 'active' && !['/ativar-acesso', '/teste-gratis', '/definir-senha', '/primeiro-acesso'].includes(location.pathname)) {
