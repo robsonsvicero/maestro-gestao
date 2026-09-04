@@ -19,7 +19,7 @@ export default function Settings() {
   });
 
   const [formData, setFormData] = useState({
-    school_name: "",
+    professional_name: "",
     logo_url: "",
     google_calendar_email: "",
     sync_with_google_calendar: false,
@@ -53,7 +53,7 @@ export default function Settings() {
   useEffect(() => {
     if (settings.length > 0) {
       setFormData({
-        school_name: settings[0].school_name || "",
+        professional_name: settings[0].professional_name || "",
         logo_url: settings[0].logo_url || "",
         google_calendar_email: settings[0].google_calendar_email || "",
         sync_with_google_calendar: settings[0].sync_with_google_calendar || false,
@@ -180,14 +180,14 @@ export default function Settings() {
           <CardContent className="pt-6 space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="school_name">
-                  Nome do Professor
+                <Label htmlFor="professional_name">
+                  Nome do profissional
                 </Label>
                 <Input
-                  id="school_name"
-                  value={formData.school_name}
-                  onChange={(e) => setFormData({ ...formData, school_name: e.target.value })}
-                  placeholder="Ex: Professor de Música João"
+                  id="professional_name"
+                  value={formData.professional_name}
+                  onChange={(e) => setFormData({ ...formData, professional_name: e.target.value })}
+                  placeholder="Ex: João da Silva"
                   required
                 />
               </div>
@@ -217,7 +217,7 @@ export default function Settings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Logo do Professor</Label>
+              <Label>Logo ou foto do profissional</Label>
               <div className="flex items-center gap-4">
                 {formData.logo_url ? (
                   <img src={formData.logo_url} alt="Logo" className="w-20 h-20 object-contain rounded-lg border" />
@@ -255,7 +255,7 @@ export default function Settings() {
                 </div>
               </div>
               <p className="text-sm text-slate-500">
-                Faça upload do logo. Se não tiver, o ícone padrão será exibido.
+                Faça upload do logo ou da sua foto. Se não tiver, o ícone padrão será exibido.
               </p>
             </div>
 

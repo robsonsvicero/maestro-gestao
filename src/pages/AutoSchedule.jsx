@@ -60,7 +60,7 @@ export default function AutoSchedule() {
       if (selectedStudent.email) {
         const { error: emailError } = await supabase.functions.invoke('send-email', {
           body: {
-            from_name: settings.school_name || "Professor de Música",
+            from_name: settings.professional_name || "Profissional",
             to: selectedStudent.email,
             subject: "Aula Agendada - Confirmação",
             body: `
@@ -76,7 +76,7 @@ export default function AutoSchedule() {
 
               Nos vemos em breve!
 
-              ${settings.school_name || "Equipe"}
+              ${settings.professional_name || "Profissional"}
             `
           }
         });
@@ -87,7 +87,7 @@ export default function AutoSchedule() {
       if (settings.admin_email) {
         const { error: adminEmailError } = await supabase.functions.invoke('send-email', {
           body: {
-            from_name: settings.school_name || "Sistema",
+            from_name: settings.professional_name || "Sistema",
             to: settings.admin_email,
             subject: "Nova Aula Agendada",
             body: `

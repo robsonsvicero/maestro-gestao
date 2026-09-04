@@ -24,7 +24,7 @@ const emptyHours = {
 export default function MyHours() {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
-    school_name: "",
+    professional_name: "",
     default_lesson_duration: 60,
     available_hours: emptyHours
   });
@@ -40,13 +40,13 @@ export default function MyHours() {
       const s = settings[0];
       setExistingId(s.id);
       setFormData({
-        school_name: s.school_name || "",
+        professional_name: s.professional_name || "",
         default_lesson_duration: s.default_lesson_duration || 60,
         available_hours: s.available_hours || emptyHours
       });
     } else {
       setExistingId(null);
-      setFormData({ school_name: "", default_lesson_duration: 60, available_hours: emptyHours });
+      setFormData({ professional_name: "", default_lesson_duration: 60, available_hours: emptyHours });
     }
   }, [settings]);
 
@@ -57,7 +57,7 @@ export default function MyHours() {
       } else {
         return base44.entities.AppSettings.create({
           ...data,
-          school_name: data.school_name || "Meu Horário"
+          professional_name: data.professional_name || "Meu horário"
         });
       }
     },

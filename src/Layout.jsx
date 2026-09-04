@@ -229,7 +229,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                 {appSettings?.logo_url ? (
                   <img
                     src={appSettings.logo_url}
-                    alt={`Logo de ${appSettings.school_name || 'professor'}`}
+                    alt={`Logo de ${appSettings.professional_name || 'profissional'}`}
                     className="h-11 w-11 shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1 dark:border-slate-600"
                   />
                 ) : (
@@ -239,7 +239,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                 )}
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {user?.full_name || "Professor"}
+                    {user?.full_name || "Profissional"}
                   </p>
                   <p className="truncate text-xs text-slate-600 dark:text-slate-300">
                     {user?.email || "usuario@exemplo.com"}

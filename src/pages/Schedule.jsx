@@ -66,7 +66,7 @@ ${data.price ? `Valor: R$ ${data.price.toFixed(2)}` : ''}
 
           // Send event to teacher's calendar
           await base44.integrations.Core.SendEmail({
-            from_name: settings.school_name || "Sistema",
+            from_name: settings.professional_name || "Sistema",
             to: settings.google_calendar_email,
             subject: `Aula Agendada - ${data.student_name} - ${format(new Date(data.date), 'dd/MM/yyyy')} ${data.start_time}`,
             body: `${eventDescription}\n\nEvento do Google Calendar será criado automaticamente.`
@@ -75,7 +75,7 @@ ${data.price ? `Valor: R$ ${data.price.toFixed(2)}` : ''}
           // If student has email, send to their calendar too
           if (student?.email) {
             await base44.integrations.Core.SendEmail({
-              from_name: settings.school_name || "Professor de Música",
+              from_name: settings.professional_name || "Profissional",
               to: student.email,
               subject: `Aula Agendada - ${data.instrument}`,
               body: `

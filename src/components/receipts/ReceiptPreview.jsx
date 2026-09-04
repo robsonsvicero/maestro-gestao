@@ -181,7 +181,7 @@ export default function ReceiptPreview({ receipt, companySettings, onClose, them
             <h1 className={`text-3xl font-bold mb-2 ${
               theme === 'dark' ? 'text-slate-100' : 'text-slate-900'
             }`}>
-              {companySettings?.school_name || "Professor de Música"}
+              {companySettings?.professional_name || "Profissional"}
             </h1>
             <p className={`text-lg ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
               RECIBO DE PAGAMENTO
@@ -276,7 +276,7 @@ export default function ReceiptPreview({ receipt, companySettings, onClose, them
               theme === 'dark' ? 'border-slate-700' : 'border-slate-400'
             }`}></div>
             <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-              {companySettings?.school_name || "Assinatura"}
+              {companySettings?.professional_name || "Assinatura"}
             </p>
           </div>
 

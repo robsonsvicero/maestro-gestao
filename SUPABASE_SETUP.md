@@ -53,10 +53,10 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
--- CONFIGURAÇÕES GERAIS DA ESCOLA
+-- CONFIGURAÇÕES GERAIS DO PROFISSIONAL
 create table if not exists public.app_settings (
   id uuid primary key default gen_random_uuid(),
-  school_name text not null default 'Escola de Música',
+  professional_name text not null default 'Nome do profissional',
   logo_url text,
   google_calendar_email text,
   sync_with_google_calendar boolean not null default false,
@@ -253,7 +253,7 @@ Exemplo de configuração inicial do sistema:
 
 ```sql
 insert into public.app_settings (
-  school_name,
+  professional_name,
   logo_url,
   google_calendar_email,
   sync_with_google_calendar,
@@ -262,7 +262,7 @@ insert into public.app_settings (
   default_lesson_duration,
   available_hours
 ) values (
-  'Escola de Música Maestro',
+  'Nome do profissional',
   '',
   'admin@exemplo.com',
   false,
