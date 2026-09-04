@@ -9,11 +9,41 @@ import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from 'r
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { Skeleton } from '@/components/ui/skeleton';
 import { createPageUrl } from '@/utils';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
+
+const AppLoadingScreen = () => (
+  <div className="min-h-screen bg-slate-50 p-4 dark:bg-slate-900 md:p-6">
+    <div className="mx-auto flex max-w-7xl gap-6">
+      <aside className="hidden w-64 shrink-0 space-y-6 md:block">
+        <div className="flex items-center gap-3 border-b border-slate-200 pb-5 dark:border-slate-800">
+          <Skeleton className="h-11 w-11 rounded-full" />
+          <Skeleton className="h-5 w-32" />
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5, 6].map((item) => <Skeleton key={item} className="h-11 w-full rounded-xl" />)}
+        </div>
+      </aside>
+      <main className="min-w-0 flex-1 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <Skeleton className="h-10 w-36 rounded-lg" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((item) => <Skeleton key={item} className="h-32 rounded-2xl" />)}
+        </div>
+        <Skeleton className="h-72 w-full rounded-2xl" />
+      </main>
+    </div>
+  </div>
+);
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
@@ -24,11 +54,7 @@ const AuthenticatedApp = () => {
   const location = useLocation();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   if (authError) {
@@ -48,11 +74,7 @@ const AuthenticatedApp = () => {
   }
 
   if (isAuthenticated && (accessStatus === 'idle' || accessStatus === 'checking')) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   if (isAuthenticated && accessStatus !== 'active' && !['/ativar-acesso', '/teste-gratis', '/definir-senha', '/primeiro-acesso'].includes(location.pathname)) {
