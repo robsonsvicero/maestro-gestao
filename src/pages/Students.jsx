@@ -8,13 +8,14 @@ import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getNextPaymentDate, getPaymentStatus } from "@/utils/paymentUtils";
-import { generateAutomaticLessons, deleteFutureLessons, getLessonDayOfWeek } from "@/utils/lessonUtils";
+import { generateAutomaticLessons, deleteFutureLessons, getLessonDayOfWeek, rescheduleFutureLessons } from "@/utils/lessonUtils";
 import { getLocalDateString } from "@/utils/dateUtils";
 
 import StudentForm from "../components/students/StudentForm";
 import StudentCard from "../components/students/StudentCard";
 import StudentMonthlyFeesView from "../components/students/StudentMonthlyFeesView";
 import ReceiptPreview from "../components/receipts/ReceiptPreview";
+import RescheduleModal from "../components/students/RescheduleModal";
 
 export default function Students() {
   const [showForm, setShowForm] = useState(false);
@@ -23,6 +24,8 @@ export default function Students() {
   const [previewReceipt, setPreviewReceipt] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("name");
+  const [rescheduleStudent, setRescheduleStudent] = useState(null);
+  const [isRescheduling, setIsRescheduling] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: students = [], isLoading } = useQuery({
@@ -143,6 +146,30 @@ export default function Students() {
   const handleDelete = (id) => {
     if (confirm('Tem certeza que deseja excluir este aluno?')) {
       deleteMutation.mutate(id);
+    }
+  };
+
+  const handleReschedule = async (newDay, newTime) => {
+    if (!rescheduleStudent) return;
+    setIsRescheduling(true);
+    try {
+      const { deletedCount, createdCount } = await rescheduleFutureLessons(
+        rescheduleStudent,
+        newDay,
+        newTime,
+        base44,
+      );
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['lessons'] });
+      toast.success(
+        `Reagendamento concluído! ${deletedCount} aula(s) cancelada(s) e ${createdCount} nova(s) criada(s).`
+      );
+      setRescheduleStudent(null);
+    } catch (error) {
+      console.error('Erro ao reagendar aulas:', error);
+      toast.error(error?.message || 'Não foi possível reagendar as aulas.');
+    } finally {
+      setIsRescheduling(false);
     }
   };
 
@@ -405,9 +432,19 @@ export default function Students() {
               onDelete={() => handleDelete(student.id)}
               onRegisterPayment={() => handleRegisterPayment(student)}
               onOpenMonthlyFees={() => setSelectedStudentForFees(student)}
+              onReschedule={student.lesson_day || student.lesson_time ? () => setRescheduleStudent(student) : undefined}
             />
           ))}
         </div>
+      )}
+
+      {rescheduleStudent && (
+        <RescheduleModal
+          student={rescheduleStudent}
+          isLoading={isRescheduling}
+          onConfirm={handleReschedule}
+          onClose={() => setRescheduleStudent(null)}
+        />
       )}
     </div>
   );

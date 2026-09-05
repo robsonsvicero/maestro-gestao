@@ -105,3 +105,65 @@ export const deleteFutureLessons = async (studentId, base44) => {
     return 0;
   }
 };
+
+/**
+ * Reagenda as aulas futuras de um aluno para um novo dia e/ou horário.
+ * Deleta as aulas futuras existentes, cria novas no novo padrão e atualiza o aluno.
+ * @param {Object} student - Dados atuais do aluno
+ * @param {string} newLessonDay - Novo dia da semana (ex: "segunda-feira")
+ * @param {string} newLessonTime - Novo horário (ex: "14:30")
+ * @param {Object} base44 - Cliente base44
+ * @returns {Promise<{deletedCount: number, createdCount: number}>}
+ */
+export const rescheduleFutureLessons = async (student, newLessonDay, newLessonTime, base44) => {
+  const targetDayOfWeek = getLessonDayOfWeek(newLessonDay);
+  if (targetDayOfWeek === undefined) {
+    throw new Error('Dia da aula inválido para o reagendamento.');
+  }
+
+  // 1. Deletar aulas futuras existentes
+  const deletedCount = await deleteFutureLessons(student.id, base44);
+
+  // 2. Calcular a data da próxima ocorrência do novo dia da semana
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysUntilNext = (targetDayOfWeek - today.getDay() + 7) % 7;
+  const firstLessonDate = new Date(today);
+  firstLessonDate.setDate(today.getDate() + daysUntilNext);
+
+  // 3. Gerar 52 aulas a partir do novo padrão
+  const duration = 60;
+  const newLessons = Array.from({ length: 52 }, (_, week) => {
+    const date = new Date(firstLessonDate);
+    date.setDate(date.getDate() + week * 7);
+    return {
+      student_id: student.id,
+      student_name: student.full_name,
+      date: toDateString(date),
+      start_time: newLessonTime,
+      end_time: calculateEndTime(newLessonTime, duration),
+      duration,
+      status: 'scheduled',
+      instrument: student.instrument,
+      payment_status: 'pending',
+      notes: `Aula agendada automaticamente para ${student.full_name}`,
+    };
+  });
+
+  const createdLessons = await Promise.all(
+    newLessons.map(async (lesson) => {
+      const created = await base44.entities.Lesson.create(lesson);
+      if (!created) throw new Error('Não foi possível criar uma das aulas no reagendamento.');
+      return created;
+    }),
+  );
+
+  // 4. Atualizar os campos lesson_day e lesson_time do aluno
+  await base44.entities.Student.update(student.id, {
+    ...student,
+    lesson_day: newLessonDay,
+    lesson_time: newLessonTime,
+  });
+
+  return { deletedCount, createdCount: createdLessons.length };
+};
