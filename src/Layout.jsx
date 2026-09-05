@@ -15,7 +15,8 @@ import {
   Sparkles,
   KeyRound,
   MoreHorizontal,
-  ChevronRight
+  ChevronRight,
+  Power
 } from "lucide-react";
 import {
   Sidebar,
@@ -32,6 +33,12 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navigationItems = [
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard },
@@ -96,7 +103,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
 
         setUser({
           ...authUser,
-          full_name: profile?.full_name || authUser.email?.split('@')[0] || 'Usuário',
+          full_name: profile?.full_name || authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário',
           role: profile?.role || 'user',
         });
       }
@@ -125,11 +132,18 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
     ? Math.max(0, Math.ceil((new Date(accessEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : null;
   const showExpiryAlert = accessType && accessDaysRemaining !== null && accessDaysRemaining <= 4;
-  const mobileNavigationItems = [
+  const primaryNavItems = [
     { title: 'Dashboard', url: createPageUrl('Dashboard'), icon: LayoutDashboard },
     { title: 'Agenda', url: createPageUrl('Schedule'), icon: Calendar },
-    { title: 'Outros', url: createPageUrl('Outros'), icon: MoreHorizontal },
-    { title: 'Configurações', url: createPageUrl('Settings'), icon: Settings },
+    { type: 'more', title: 'Mais', icon: MoreHorizontal },
+    { title: 'Finanças', url: createPageUrl('Finances'), icon: Wallet },
+    { title: 'Alunos', url: createPageUrl('Students'), icon: Users },
+  ];
+
+  const moreNavItems = [
+    { title: "Agendamento Auto", url: createPageUrl("AutoSchedule"), icon: Sparkles },
+    { title: "Meus Horários", url: createPageUrl("MyHours"), icon: Clock },
+    { title: "Recibos", url: createPageUrl("Receipts"), icon: ReceiptIcon },
   ];
 
   return (
@@ -239,7 +253,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                 )}
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {user?.full_name || "Profissional"}
+                    {appSettings?.professional_name || user?.full_name || "Profissional"}
                   </p>
                   <p className="truncate text-xs text-slate-600 dark:text-slate-300">
                     {user?.email || "usuario@exemplo.com"}
@@ -263,17 +277,33 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
           <header className="border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900 lg:hidden no-print">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <img
-                  src="/logo_maeztro.webp"
-                  alt="Logo MAEZTRO"
-                  className="h-10 w-10 shrink-0 rounded-full object-contain"
-                />
+                <Link to={createPageUrl("Settings")} className="shrink-0 transition-transform hover:scale-105">
+                  {appSettings?.logo_url ? (
+                    <img
+                      src={appSettings.logo_url}
+                      alt={`Logo de ${appSettings.professional_name || 'profissional'}`}
+                      className="h-10 w-10 rounded-full border border-slate-200 bg-white object-cover dark:border-slate-600"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs font-bold text-slate-400 dark:border-slate-600 dark:bg-slate-800">
+                      <Music className="h-5 w-5" />
+                    </div>
+                  )}
+                </Link>
                 <div className="min-w-0">
                   <h1 className="truncate text-base font-bold text-slate-900 dark:text-slate-100">
-                    MAEZTRO Gestão
+                    Olá, {(appSettings?.professional_name || user?.full_name || "Profissional").split(' ')[0]}!
                   </h1>
                 </div>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                onClick={handleLogout}
+              >
+                <Power className="h-5 w-5" />
+              </Button>
             </div>
           </header>
 
@@ -290,8 +320,45 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
 
         <nav aria-label="Menu principal" className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,23,42,0.10)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 lg:hidden no-print">
           <div className="relative">
-            <div className="mobile-nav-scrollbar flex h-20 items-center gap-1 overflow-x-auto px-2 pr-12">
-              {mobileNavigationItems.map((item) => {
+            <div className="flex h-20 items-center justify-around px-2">
+              {primaryNavItems.map((item) => {
+                if (item.type === 'more') {
+                  return (
+                    <DropdownMenu key={item.title}>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={item.title}
+                          title={item.title}
+                          className="flex h-14 w-14 flex-col items-center justify-center rounded-xl transition-colors text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                          <item.icon className="h-5 w-5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="center" side="top" className="w-56 rounded-xl p-2 pb-3 mb-2" sideOffset={10}>
+                        {moreNavItems.map((moreItem) => {
+                          const isActive = location.pathname === moreItem.url;
+                          return (
+                            <DropdownMenuItem key={moreItem.title} asChild>
+                              <Link
+                                to={moreItem.url}
+                                className={`flex cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors mb-1 ${
+                                  isActive
+                                    ? 'bg-[#094C7E] text-white'
+                                    : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                                }`}
+                              >
+                                <moreItem.icon className="h-5 w-5" />
+                                {moreItem.title}
+                              </Link>
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  );
+                }
+
                 const isActive = location.pathname === item.url;
                 return (
                   <Link
@@ -299,7 +366,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                     to={item.url}
                     aria-label={item.title}
                     title={item.title}
-                    className={`flex h-14 min-w-16 shrink-0 items-center justify-center rounded-xl px-3 transition-colors ${
+                    className={`flex h-14 w-14 flex-col items-center justify-center rounded-xl transition-colors ${
                       isActive
                         ? 'bg-[#094C7E] text-white shadow-sm'
                         : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -309,15 +376,6 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                   </Link>
                 );
               })}
-              <button
-                type="button"
-                aria-label="Sair"
-                title="Sair"
-                onClick={handleLogout}
-                className="flex h-14 min-w-16 shrink-0 items-center justify-center rounded-xl px-3 text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
             </div>
             
           </div>

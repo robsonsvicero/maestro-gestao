@@ -27,7 +27,9 @@ Deno.serve(async (request) => {
   if (userError || !user) return reply(401, { error: 'Invalid session' });
 
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
-  const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).maybeSingle();
+  const { data: profile, error: profileSelectError } = await admin.from('profiles').select('role').eq('id', user.id).maybeSingle();
+  if (profileSelectError) return reply(500, { error: 'Could not fetch profile' });
+  
   const isAdmin = profile?.role === 'admin';
   if (isAdmin) return reply(200, { status: 'active', is_admin: true });
 

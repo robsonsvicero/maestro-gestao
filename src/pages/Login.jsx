@@ -21,7 +21,7 @@ export default function Login() {
     });
 
     if (accessError) throw accessError;
-    navigate(access?.is_admin ? createPageUrl('AdminLicenses') : '/', { replace: true });
+    navigate(access?.is_admin ? createPageUrl('AdminLicenses') : createPageUrl('Schedule'), { replace: true });
   };
   useEffect(() => {
     supabase.auth.getSession()
