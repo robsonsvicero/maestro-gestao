@@ -158,12 +158,19 @@ export const rescheduleFutureLessons = async (student, newLessonDay, newLessonTi
     }),
   );
 
-  // 4. Atualizar os campos lesson_day e lesson_time do aluno
-  await base44.entities.Student.update(student.id, {
-    ...student,
+  // 4. Atualizar apenas os campos lesson_day e lesson_time no aluno.
+  // IMPORTANTE: não incluir 'id', 'created_at', 'updated_at' etc no payload,
+  // pois o Supabase rejeita silenciosamente atualizações que incluem a PK.
+  const updatePayload = {
     lesson_day: newLessonDay,
     lesson_time: newLessonTime,
-  });
+  };
+
+  const updated = await base44.entities.Student.update(student.id, updatePayload);
+  if (!updated) {
+    console.error('Student.update retornou null — verifique as políticas RLS da tabela student no Supabase.');
+    throw new Error('Não foi possível atualizar o dia/horário do aluno. Verifique as permissões no Supabase.');
+  }
 
   return { deletedCount, createdCount: createdLessons.length };
 };

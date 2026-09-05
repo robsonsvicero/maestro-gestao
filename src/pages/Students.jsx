@@ -62,7 +62,7 @@ export default function Students() {
       } else {
         toast.success('Aluno salvo com sucesso!');
       }
-      
+
       queryClient.invalidateQueries({ queryKey: ['students'] });
       setShowForm(false);
       setEditingStudent(null);
@@ -159,8 +159,9 @@ export default function Students() {
         newTime,
         base44,
       );
-      queryClient.invalidateQueries({ queryKey: ['students'] });
-      queryClient.invalidateQueries({ queryKey: ['lessons'] });
+      // refetchQueries força recarregamento imediato dos dados do servidor
+      await queryClient.refetchQueries({ queryKey: ['students'] });
+      await queryClient.refetchQueries({ queryKey: ['lessons'] });
       toast.success(
         `Reagendamento concluído! ${deletedCount} aula(s) cancelada(s) e ${createdCount} nova(s) criada(s).`
       );
@@ -251,7 +252,7 @@ export default function Students() {
   const handlePayMonth = async (student, monthNumber, paymentInfo = {}) => {
     const { generateReceipt = false, paymentMethod = 'pix' } = paymentInfo;
     const updatedStudent = await handleRegisterPayment(student, monthNumber, { paymentMethod });
-    
+
     // Atualizar o estado com os dados atualizados imediatamente
     setSelectedStudentForFees(updatedStudent);
 
@@ -357,7 +358,7 @@ export default function Students() {
             Gerencie seus alunos de música
           </p>
         </div>
-        <Button 
+        <Button
           onClick={() => {
             setEditingStudent(null);
             setShowForm(!showForm);
