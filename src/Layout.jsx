@@ -144,6 +144,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
     { title: "Agendamento Auto", url: createPageUrl("AutoSchedule"), icon: Sparkles },
     { title: "Meus Horários", url: createPageUrl("MyHours"), icon: Clock },
     { title: "Recibos", url: createPageUrl("Receipts"), icon: ReceiptIcon },
+    ...(user?.role === 'admin' ? [{ title: "Licenças", url: createPageUrl("AdminLicenses"), icon: KeyRound }] : [])
   ];
 
   return (
@@ -180,7 +181,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {user?.role !== 'admin' && navigationItems.map((item) => {
+                  {navigationItems.map((item) => {
                     const isActive = location.pathname === item.url;
                     return (
                       <SidebarMenuItem key={item.title}>
@@ -200,7 +201,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                       </SidebarMenuItem>
                     );
                   })}
-                  {user?.role !== 'admin' && <SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
                       className={`rounded-xl transition-all duration-200 mb-1 ${
@@ -214,7 +215,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                         <span className="font-medium">Configurações</span>
                       </NavigationLink>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>}
+                  </SidebarMenuItem>
                   {user?.role === 'admin' && (
                     <SidebarMenuItem>
                       <SidebarMenuButton

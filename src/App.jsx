@@ -60,7 +60,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, accessStatus, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, accessStatus, navigateToLogin, isAdmin } = useAuth();
   const location = useLocation();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -99,6 +99,7 @@ const AuthenticatedApp = () => {
       <Route path="/primeiro-acesso" element={<Pages.FirstAccess />} />
       <Route path="/ativar-acesso" element={<Pages.ActivateAccess />} />
       <Route path="/" element={
+        isAdmin ? <Navigate to="/admin-licenses" replace /> :
         <LayoutWrapper currentPageName={mainPageKey}>
           <MainPage />
         </LayoutWrapper>
