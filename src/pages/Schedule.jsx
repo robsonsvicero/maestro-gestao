@@ -151,6 +151,16 @@ Nos vemos em breve!
     setShowForm(true);
   };
 
+  const handleLessonUpdate = (lesson, updates) => {
+    updateMutation.mutate({
+      id: lesson.id,
+      data: {
+        ...lesson,
+        ...updates
+      },
+    });
+  };
+
   return (
     <div className="p-4 md:p-8 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -238,6 +248,7 @@ Nos vemos em breve!
             onLessonClick={handleEdit}
             onDeleteLesson={handleDelete}
             onStatusChange={handleStatusChange}
+            onLessonUpdate={handleLessonUpdate}
             onNewLesson={handleNewLessonAtTime}
             appSettings={settings}
             isLoading={isLoading}

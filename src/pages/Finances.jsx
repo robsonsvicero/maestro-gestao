@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
+import { base44 } from "@/api/base44Client";
 import { jsPDF } from "jspdf";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowDown, ArrowUp, ArrowUpDown, FileDown, Plus, Search, PencilLine, Trash2 } from "lucide-react";
 import { getLocalDateString, parseLocalDate } from "@/utils/dateUtils";
+import { getNextPaymentDate } from "@/utils/paymentUtils";
 
 const fallbackTransactions = [];
 
@@ -91,9 +93,54 @@ export default function Finances() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase.from('transaction').delete().eq('id', id);
+    mutationFn: async (transaction) => {
+      const { error } = await supabase.from('transaction').delete().eq('id', transaction.id);
       if (error) throw error;
+
+      // Se for mensalidade (receita), reverter o pagamento no histórico do aluno
+      if (transaction.type === 'income' && transaction.category === 'monthly_payment' && transaction.student_name) {
+        try {
+          const students = await base44.entities.Student.list();
+          const student = transaction.student_id
+            ? students.find((s) => s.id === transaction.student_id)
+            : students.find((s) => s.full_name === transaction.student_name);
+
+          if (student) {
+            const paymentHistory = Array.isArray(student.payment_history) ? [...student.payment_history] : [];
+
+            // Match preciso por student_id + mês/ano (transações novas)
+            // ou fallback por paid_at === date (transações antigas)
+            const filteredHistory = transaction.payment_month && transaction.payment_year
+              ? paymentHistory.filter(
+                  (entry) => !(String(entry.month) === transaction.payment_month && String(entry.year) === transaction.payment_year)
+                )
+              : paymentHistory.filter((entry) => entry.paid_at !== transaction.date);
+
+            if (filteredHistory.length < paymentHistory.length) {
+              const nextPaymentDate = getNextPaymentDate(
+                student.payment_day,
+                'pending',
+                filteredHistory,
+              );
+
+              const lastPaymentDate = filteredHistory.length > 0
+                ? filteredHistory.reduce((latest, entry) => entry.paid_at > latest ? entry.paid_at : latest, '')
+                : null;
+
+              await base44.entities.Student.update(student.id, {
+                ...student,
+                payment_history: filteredHistory,
+                next_payment_date: nextPaymentDate,
+                last_payment_date: lastPaymentDate,
+              });
+
+              queryClient.invalidateQueries(['students']);
+            }
+          }
+        } catch (studentError) {
+          console.error('Erro ao reverter pagamento do aluno:', studentError);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -512,7 +559,7 @@ export default function Finances() {
                       <td className="px-3 py-3">
                         <div className="flex justify-end gap-2">
                           <Button size="icon" variant="outline" onClick={() => openEditTransactionForm(transaction)} className="h-8 w-8"><PencilLine className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="outline" onClick={() => { if (window.confirm('Deseja excluir esta transação?')) deleteMutation.mutate(transaction.id); }} className="h-8 w-8 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="outline" onClick={() => { if (window.confirm('Deseja excluir esta transação?')) deleteMutation.mutate(transaction); }} className="h-8 w-8 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </td>
                     </tr>

@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getNextPaymentDate, getPaymentStatus } from "@/utils/paymentUtils";
+import { formatPhone, unformatPhone } from "@/utils/formatUtils";
 
 export default function StudentForm({ student, onSubmit, onCancel, theme, isSubmitting = false }) {
   const [formData, setFormData] = useState(student || {
@@ -101,8 +102,8 @@ export default function StudentForm({ student, onSubmit, onCancel, theme, isSubm
           <Label htmlFor="phone" className={labelClass}>Telefone *</Label>
           <Input
             id="phone"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            value={formatPhone(formData.phone)}
+            onChange={(e) => setFormData({ ...formData, phone: unformatPhone(e.target.value) })}
             placeholder="(00) 00000-0000"
             required
             className={inputClass}
@@ -136,8 +137,8 @@ export default function StudentForm({ student, onSubmit, onCancel, theme, isSubm
           <Label htmlFor="parent_phone" className={labelClass}>Telefone do Responsável</Label>
           <Input
             id="parent_phone"
-            value={formData.parent_phone || ''}
-            onChange={(e) => setFormData({ ...formData, parent_phone: e.target.value })}
+            value={formatPhone(formData.parent_phone || '')}
+            onChange={(e) => setFormData({ ...formData, parent_phone: unformatPhone(e.target.value) })}
             placeholder="(00) 00000-0000"
             className={inputClass}
           />

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Plus, Sparkles, Music2, MapPin, CalendarDays } from "lucide-react";
 import { format, addDays, subDays, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { motion } from "framer-motion";
 
 const dayKeyMap = {
   0: "sunday",
@@ -36,7 +37,13 @@ const timeToMinutes = (timeStr) => {
   return h * 60 + m;
 };
 
-export default function DayView({ lessons, selectedDate, onDateChange, onLessonClick, onDeleteLesson: _onDeleteLesson, onStatusChange: _onStatusChange, onNewLesson, appSettings, isLoading }) {
+const formatMinutesToTime = (totalMinutes) => {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
+export default function DayView({ lessons, selectedDate, onDateChange, onLessonClick, onDeleteLesson: _onDeleteLesson, onStatusChange: _onStatusChange, onLessonUpdate, onNewLesson, appSettings, isLoading }) {
   const dayKey = dayKeyMap[selectedDate.getDay()];
   const availableHours = appSettings?.available_hours?.[dayKey] || [];
 
@@ -246,6 +253,7 @@ export default function DayView({ lessons, selectedDate, onDateChange, onLessonC
 
               {/* Timeline grid */}
               <div
+                id="timeline-container"
                 className="flex-1 relative border-l border-slate-100 dark:border-slate-700"
                 style={{ height: totalHours * HOUR_HEIGHT }}
               >
@@ -294,9 +302,48 @@ export default function DayView({ lessons, selectedDate, onDateChange, onLessonC
                   const columnWidth = 100 / columnCount;
 
                   return (
-                    <div
-                      key={lesson.id || idx}
-                      className={`absolute rounded-lg border-l-4 ${status.border} bg-white dark:bg-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden z-10 ${
+                    <motion.div
+                      key={`${lesson.id}-${lesson.start_time}-${lesson.status}`}
+                      drag
+                      dragSnapToOrigin
+                      onDragEnd={(event, info) => {
+                        const unscheduledContainer = document.getElementById('unscheduled-container');
+                        if (unscheduledContainer) {
+                           const rect = unscheduledContainer.getBoundingClientRect();
+                           const rectTop = rect.top + window.scrollY;
+                           const rectBottom = rect.bottom + window.scrollY;
+                           const rectLeft = rect.left + window.scrollX;
+                           const rectRight = rect.right + window.scrollX;
+                           
+                           if (info.point.x >= rectLeft && info.point.x <= rectRight && info.point.y >= rectTop && info.point.y <= rectBottom) {
+                             if (onLessonUpdate) onLessonUpdate(lesson, { status: 'cancelled' });
+                             return; // Do not process timeline drop if it dropped in unscheduled
+                           }
+                        }
+
+                        const yOffset = info.offset.y;
+                        const minuteOffset = Math.round((yOffset / HOUR_HEIGHT) * 60);
+                        const snappedMinuteOffset = Math.round(minuteOffset / 15) * 15;
+                        
+                        if (snappedMinuteOffset !== 0 && onLessonUpdate) {
+                          const currentStartMin = timeToMinutes(lesson.start_time);
+                          const currentEndMin = lesson.end_time ? timeToMinutes(lesson.end_time) : currentStartMin + (lesson.duration || 60);
+                          
+                          const newStartMin = currentStartMin + snappedMinuteOffset;
+                          const newEndMin = currentEndMin + snappedMinuteOffset;
+                          
+                          if (newStartMin >= 0) {
+                            onLessonUpdate(
+                              lesson, {
+                                start_time: formatMinutesToTime(newStartMin),
+                                end_time: formatMinutesToTime(newEndMin),
+                                status: 'scheduled'
+                              }
+                            );
+                          }
+                        }
+                      }}
+                      className={`absolute rounded-lg border-l-4 ${status.border} bg-white dark:bg-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden z-20 ${
                         lesson.status === "cancelled" ? "opacity-50" : ""
                       }`}
                       style={{
@@ -304,10 +351,14 @@ export default function DayView({ lessons, selectedDate, onDateChange, onLessonC
                         height,
                         left: `${column * columnWidth}%`,
                         width: `${columnWidth}%`,
+                        touchAction: "none"
                       }}
-                      onClick={() => onLessonClick(lesson)}
+                      onClick={(e) => {
+                        if (e.defaultPrevented) return;
+                        onLessonClick(lesson);
+                      }}
                     >
-                      <div className="px-3 py-1.5 h-full flex flex-col justify-start">
+                      <div className="px-3 py-1.5 h-full flex flex-col justify-start pointer-events-none">
                         <div className="flex items-center gap-1.5">
                           <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
                             {lesson.student_name}
@@ -335,7 +386,7 @@ export default function DayView({ lessons, selectedDate, onDateChange, onLessonC
                           </div>
                         )}
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
 
@@ -369,7 +420,7 @@ export default function DayView({ lessons, selectedDate, onDateChange, onLessonC
 
       {/* Sem horário section */}
       <Card className="shadow-sm bg-white dark:bg-slate-800">
-        <CardContent className="p-5">
+        <CardContent className="p-5" id="unscheduled-container">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
               <CalendarDays className="w-4 h-4" />
@@ -388,12 +439,44 @@ export default function DayView({ lessons, selectedDate, onDateChange, onLessonC
               {unscheduledLessons.map((lesson, idx) => {
                 const status = statusConfig[lesson.status] || statusConfig.scheduled;
                 return (
-                  <div
-                    key={lesson.id || idx}
-                    className={`flex items-center justify-between rounded-lg border-l-4 ${status.border} bg-slate-50 dark:bg-slate-700/40 px-3 py-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-all`}
-                    onClick={() => onLessonClick(lesson)}
+                  <motion.div
+                    key={`${lesson.id}-${lesson.status}`}
+                    drag
+                    dragSnapToOrigin
+                    onDragEnd={(event, info) => {
+                      const timelineContainer = document.getElementById('timeline-container');
+                      if (timelineContainer && onLessonUpdate) {
+                        const rect = timelineContainer.getBoundingClientRect();
+                        const rectTop = rect.top + window.scrollY;
+                        const rectBottom = rect.bottom + window.scrollY;
+                        const rectLeft = rect.left + window.scrollX;
+                        const rectRight = rect.right + window.scrollX;
+                        
+                        if (info.point.x >= rectLeft && info.point.x <= rectRight && info.point.y >= rectTop && info.point.y <= rectBottom) {
+                          // Calculate time based on drop position relative to timeline container
+                          const dropY = info.point.y - rectTop;
+                          const droppedMinute = Math.round((dropY / HOUR_HEIGHT) * 60);
+                          const snappedStartMin = Math.round(droppedMinute / 15) * 15 + (startHour * 60);
+                          
+                          if (snappedStartMin >= 0) {
+                            const newEndMin = snappedStartMin + (lesson.duration || 60);
+                            onLessonUpdate(lesson, {
+                              start_time: formatMinutesToTime(snappedStartMin),
+                              end_time: formatMinutesToTime(newEndMin),
+                              status: 'scheduled'
+                            });
+                          }
+                        }
+                      }
+                    }}
+                    className={`flex items-center justify-between rounded-lg border-l-4 ${status.border} bg-slate-50 dark:bg-slate-700/40 px-3 py-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-all z-20 relative`}
+                    onClick={(e) => {
+                      if (e.defaultPrevented) return;
+                      onLessonClick(lesson);
+                    }}
+                    style={{ touchAction: "none" }}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 pointer-events-none">
                       <div className={`w-2 h-2 rounded-full ${status.dot}`} />
                       <div>
                         <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -404,10 +487,10 @@ export default function DayView({ lessons, selectedDate, onDateChange, onLessonC
                         </p>
                       </div>
                     </div>
-                    <Badge className={`${status.class} text-[10px]`}>
+                    <Badge className={`${status.class} text-[10px] pointer-events-none`}>
                       {status.label}
                     </Badge>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>

@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, CheckCircle2, FileText, Lock, ReceiptText } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, FileText, Lock, ReceiptText, Trash2 } from 'lucide-react';
 
 const monthNames = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-export default function StudentMonthlyFeesView({ student, onBack, onPay, onGenerateReceipt }) {
+export default function StudentMonthlyFeesView({ student, onBack, onPay, onDeletePayment, onGenerateReceipt }) {
   const currentYear = new Date().getFullYear();
   const today = new Date();
   const enrollmentDate = student.created_date ? new Date(student.created_date) : new Date();
@@ -127,13 +127,29 @@ export default function StudentMonthlyFeesView({ student, onBack, onPay, onGener
               )}
 
               {!isDisabled && isPaid && (
-                <Button
-                  className="w-full bg-gradient-to-r from-[#094C7E] to-[#0A5A94]"
-                  onClick={() => onGenerateReceipt(monthNumber)}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Gerar recibo
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    className="w-full bg-gradient-to-r from-[#094C7E] to-[#0A5A94]"
+                    onClick={() => onGenerateReceipt(monthNumber)}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Gerar recibo
+                  </Button>
+                  {onDeletePayment && (
+                    <Button
+                      variant="outline"
+                      className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                      onClick={() => {
+                        if (window.confirm(`Deseja excluir o pagamento de ${monthName}? A mensalidade voltará para aberto.`)) {
+                          onDeletePayment(monthNumber);
+                        }
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir pagamento
+                    </Button>
+                  )}
+                </div>
               )}
 
               {!isDisabled && !isPaid && (

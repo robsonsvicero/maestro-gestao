@@ -94,9 +94,23 @@ export default function Students() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Student.delete(id),
+    mutationFn: async (student) => {
+      // 1. Deletar aulas futuras
+      await deleteFutureLessons(student.id, base44).catch(err => console.error(err));
+
+      // 2. Deletar lançamentos financeiros vinculados ao aluno
+      await supabase.from('transaction').delete().eq('student_id', student.id).catch(err => console.error(err));
+      // Fallback para transações antigas sem student_id
+      await supabase.from('transaction').delete().eq('student_name', student.full_name).catch(err => console.error(err));
+
+      // 3. Deletar o aluno
+      await base44.entities.Student.delete(student.id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['lessons'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      toast.success('Aluno, aulas futuras e lançamentos financeiros removidos.');
     },
   });
 
@@ -143,9 +157,9 @@ export default function Students() {
     setShowForm(true);
   };
 
-  const handleDelete = (id) => {
-    if (confirm('Tem certeza que deseja excluir este aluno?')) {
-      deleteMutation.mutate(id);
+  const handleDelete = (student) => {
+    if (confirm(`Tem certeza que deseja excluir o aluno ${student.full_name}? Isso também apagará as aulas futuras e o histórico financeiro.`)) {
+      deleteMutation.mutate(student);
     }
   };
 
@@ -191,18 +205,6 @@ export default function Students() {
 
     const createdReceipt = await base44.entities.Receipt.create(receiptPayload);
 
-    if (createdReceipt) {
-      await base44.entities.Transaction.create({
-        type: 'income',
-        category: 'monthly_payment',
-        amount,
-        description: receiptPayload.description,
-        date: paymentDate,
-        payment_method: receiptPayload.payment_method,
-        student_name: student.full_name,
-      });
-    }
-
     return createdReceipt;
   };
 
@@ -244,6 +246,20 @@ export default function Students() {
       payment_history: paymentHistory,
     };
 
+    const monthLabel = new Date(new Date().getFullYear(), monthNumber - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    await base44.entities.Transaction.create({
+      type: 'income',
+      category: 'monthly_payment',
+      amount: Number(student.monthly_payment || 0),
+      description: `Mensalidade ${monthLabel}`,
+      date: today,
+      payment_method: paymentInfo.paymentMethod || 'pix',
+      student_name: student.full_name,
+      student_id: student.id,
+      payment_month: String(monthNumber),
+      payment_year: String(new Date().getFullYear()),
+    });
+
     await base44.entities.Student.update(student.id, updatedStudent);
     queryClient.invalidateQueries(['students']);
     return updatedStudent;
@@ -261,6 +277,35 @@ export default function Students() {
       queryClient.invalidateQueries(['receipts']);
       setPreviewReceipt(receipt);
     }
+  };
+
+  const handleDeletePayment = async (student, monthNumber) => {
+    const year = new Date().getFullYear();
+    const paymentHistory = Array.isArray(student.payment_history) ? [...student.payment_history] : [];
+    const filteredHistory = paymentHistory.filter(
+      (entry) => !(Number(entry.month) === monthNumber && Number(entry.year) === year)
+    );
+
+    // Recalcular próximo vencimento sem o pagamento removido
+    const nextPaymentDate = getNextPaymentDate(
+      student.payment_day,
+      'pending',
+      filteredHistory,
+    );
+
+    const updatedStudent = {
+      ...student,
+      payment_history: filteredHistory,
+      next_payment_date: nextPaymentDate,
+      last_payment_date: filteredHistory.length > 0
+        ? filteredHistory.reduce((latest, entry) => entry.paid_at > latest ? entry.paid_at : latest, '')
+        : null,
+    };
+
+    await base44.entities.Student.update(student.id, updatedStudent);
+    queryClient.invalidateQueries(['students']);
+    setSelectedStudentForFees(updatedStudent);
+    toast.success('Pagamento removido. Mensalidade voltou para aberto.');
   };
 
   const handleGenerateReceipt = async (student, monthNumber, paymentMethod = 'pix') => {
@@ -312,6 +357,7 @@ export default function Students() {
             setPreviewReceipt(null);
           }}
           onPay={(monthNumber, paymentInfo) => handlePayMonth(selectedStudentForFees, monthNumber, paymentInfo)}
+          onDeletePayment={(monthNumber) => handleDeletePayment(selectedStudentForFees, monthNumber)}
           onGenerateReceipt={(monthNumber) => handleGenerateReceipt(selectedStudentForFees, monthNumber)}
         />
 
@@ -430,7 +476,7 @@ export default function Students() {
               key={student.id}
               student={student}
               onEdit={() => handleEdit(student)}
-              onDelete={() => handleDelete(student.id)}
+              onDelete={() => handleDelete(student)}
               onRegisterPayment={() => handleRegisterPayment(student)}
               onOpenMonthlyFees={() => setSelectedStudentForFees(student)}
               onReschedule={student.lesson_day || student.lesson_time ? () => setRescheduleStudent(student) : undefined}

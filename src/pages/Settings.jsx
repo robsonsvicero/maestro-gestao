@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Settings as SettingsIcon, CalendarCheck, Upload, Image, Lock } from "lucide-react";
+import { Settings as SettingsIcon, Save, Image, Upload, Clock, Lock, KeyRound, CalendarCheck } from "lucide-react";
+import { formatPhone, unformatPhone } from "@/utils/formatUtils";
 
 export default function Settings() {
   const queryClient = useQueryClient();
@@ -197,8 +198,8 @@ export default function Settings() {
                 </Label>
                 <Input
                   id="teacher_phone"
-                  value={formData.teacher_phone}
-                  onChange={(e) => setFormData({ ...formData, teacher_phone: e.target.value })}
+                  value={formatPhone(formData.teacher_phone)}
+                  onChange={(e) => setFormData({ ...formData, teacher_phone: unformatPhone(e.target.value) })}
                   placeholder="(00) 00000-0000"
                 />
               </div>

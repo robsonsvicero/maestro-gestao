@@ -2,6 +2,7 @@ import { Phone, Mail, MapPin, CalendarDays, Music2, Pencil, Trash2, CheckCircle,
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { parseLocalDate } from "@/utils/dateUtils";
+import { formatPhone } from "@/utils/formatUtils";
 
 export default function StudentCard({
   student,
@@ -78,7 +79,9 @@ export default function StudentCard({
         {student.phone && (
           <div className="flex items-center gap-2">
             <Phone className="h-4 w-4 text-[#094C7E]" />
-            <span>{student.phone}</span>
+            <a href={`https://wa.me/55${student.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 hover:underline">
+              {formatPhone(student.phone)}
+            </a>
           </div>
         )}
 
