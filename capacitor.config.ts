@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.maestrogestao.app',
-  appName: 'Maeztro Gestão',
+  appId: 'com.maeztrogestao.app',
+  appName: 'MAEZTRO Gestão',
   webDir: 'dist',
 };
 
