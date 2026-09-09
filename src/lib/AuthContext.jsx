@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 
 const validAccessTypes = new Set(['trial', 'subscription', 'lifetime']);
@@ -26,6 +26,7 @@ export function AuthProvider({ children }) {
   const [accessType, setAccessType] = useState(null);
   const [trialEndsAt, setTrialEndsAt] = useState(null);
   const [accessEndsAt, setAccessEndsAt] = useState(null);
+  const sessionUserId = useRef(null);
 
   const refreshAccess = async (currentSession) => {
     const sessionToCheck = currentSession ?? session;
@@ -73,6 +74,7 @@ export function AuthProvider({ children }) {
           setAuthError({ type: 'auth_required', message: error.message });
         }
 
+        sessionUserId.current = currentSession?.user?.id ?? null;
         setSession(currentSession ?? null);
         if (currentSession) await refreshAccess(currentSession);
       } catch (error) {
@@ -86,19 +88,30 @@ export function AuthProvider({ children }) {
 
     loadSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (isMounted) {
-        setSession(nextSession ?? null);
-        setIsLoadingAuth(false);
-        if (nextSession) {
-          setAccessStatus('checking');
-          setTimeout(() => refreshAccess(nextSession), 0);
-        } else {
+        const nextUserId = nextSession?.user?.id ?? null;
+        const userChanged = sessionUserId.current !== nextUserId;
+        sessionUserId.current = nextUserId;
+
+        if (!nextSession) {
+          setSession(null);
           setAccessStatus('idle');
           setIsAdmin(false);
           setAccessType(null);
           setTrialEndsAt(null);
           setAccessEndsAt(null);
+          setIsLoadingAuth(false);
+          return;
+        }
+
+        setSession((currentSession) => currentSession ?? nextSession);
+        setIsLoadingAuth(false);
+
+        // Token renewal and tab visibility changes must not blank the app.
+        if (userChanged && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+          setAccessStatus('checking');
+          setTimeout(() => refreshAccess(nextSession), 0);
         }
       }
     });
