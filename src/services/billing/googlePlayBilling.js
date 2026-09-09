@@ -77,3 +77,8 @@ export async function restoreSubscriptions() {
   }
   return results;
 }
+
+export async function openSubscriptionManagement() {
+  if (!isAndroid()) throw new Error('O gerenciamento da assinatura está disponível somente no aplicativo Android.');
+  await NativePurchases.manageSubscriptions();
+}

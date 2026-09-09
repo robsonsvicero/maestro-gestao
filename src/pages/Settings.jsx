@@ -1,18 +1,25 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { supabase } from "@/api/supabaseClient";
+import { useAuth } from "@/lib/AuthContext";
+import { getSubscriptionPlans, isGooglePlayBillingAvailable, openSubscriptionManagement, purchaseSubscription } from "@/services/billing/googlePlayBilling";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Settings as SettingsIcon, Save, Image, Upload, Clock, Lock, KeyRound, CalendarCheck } from "lucide-react";
+import { Settings as SettingsIcon, Image, Upload, Lock, CalendarCheck, CreditCard, XCircle } from "lucide-react";
 import { formatPhone, unformatPhone } from "@/utils/formatUtils";
 
 export default function Settings() {
   const queryClient = useQueryClient();
+  const { accessType, accessStatus, accessEndsAt } = useAuth();
   const [uploading, setUploading] = useState(false);
+  const [subscriptionPlans, setSubscriptionPlans] = useState([]);
+  const [billingAvailable, setBillingAvailable] = useState(false);
+  const [billingMessage, setBillingMessage] = useState('');
+  const [purchasingPlan, setPurchasingPlan] = useState(null);
 
   const { data: settings = [], isLoading: _isLoading } = useQuery({
     queryKey: ['appSettings'],
@@ -64,6 +71,63 @@ export default function Settings() {
       });
     }
   }, [settings]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadSubscriptionPlans = async () => {
+      try {
+        if (!(await isGooglePlayBillingAvailable())) return;
+        const plans = await getSubscriptionPlans();
+        if (mounted) {
+          setSubscriptionPlans(plans);
+          setBillingAvailable(true);
+        }
+      } catch (error) {
+        if (mounted) setBillingMessage(error.message || 'Não foi possível carregar os planos.');
+      }
+    };
+    loadSubscriptionPlans();
+    return () => { mounted = false; };
+  }, []);
+
+  const buySubscriptionPlan = async (plan) => {
+    setPurchasingPlan(plan.identifier);
+    setBillingMessage('');
+    try {
+      await purchaseSubscription(plan);
+      window.location.reload();
+    } catch (error) {
+      setBillingMessage(error.message || 'Não foi possível iniciar a assinatura.');
+    } finally {
+      setPurchasingPlan(null);
+    }
+  };
+
+  const cancelSubscription = async () => {
+    setBillingMessage('');
+    try {
+      await openSubscriptionManagement();
+    } catch (error) {
+      setBillingMessage(error.message || 'Não foi possível abrir o gerenciamento da assinatura.');
+    }
+  };
+
+  const currentPlanLabel = accessType === 'trial'
+    ? 'Teste gratuito'
+    : accessType === 'lifetime'
+      ? 'Licença vitalícia'
+      : accessType === 'subscription'
+        ? 'Assinatura Google Play'
+        : accessStatus === 'active'
+          ? 'Acesso administrativo'
+          : 'Sem plano ativo';
+  const currentPlanDescription = accessType === 'trial'
+    ? 'Você está usando o período de teste gratuito.'
+    : accessType === 'lifetime'
+      ? 'Seu acesso não possui data de expiração.'
+      : accessType === 'subscription'
+        ? 'Sua assinatura é gerenciada pelo Google Play.'
+        : 'Escolha um plano para continuar usando todos os recursos.';
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -271,6 +335,67 @@ export default function Settings() {
                 onChange={(e) => setFormData({ ...formData, default_lesson_duration: parseInt(e.target.value) })}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xl">
+          <CardHeader className="border-b">
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-[#094C7E]" />
+              Plano
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5 pt-6">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">Plano atual</p>
+                  <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">{currentPlanLabel}</h2>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{currentPlanDescription}</p>
+                  {accessEndsAt && accessType !== 'lifetime' && (
+                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                      Válido até {new Date(accessEndsAt).toLocaleDateString('pt-BR')}
+                    </p>
+                  )}
+                </div>
+                {accessType === 'subscription' && (
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100">
+                    Assinatura ativa
+                  </span>
+                )}
+              </div>
+              {accessType === 'subscription' && (
+                <Button type="button" variant="outline" className="mt-4 border-red-200 text-red-700 hover:bg-red-50" onClick={cancelSubscription}>
+                  <XCircle className="h-4 w-4" />
+                  Cancelar assinatura
+                </Button>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold">Opções de plano</h3>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Escolha entre o plano mensal ou anual.</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {[
+                { id: 'monthly', name: 'Plano Mensal', price: 'R$ 29,90', period: '/mês' },
+                { id: 'annual', name: 'Plano Anual', price: 'R$ 274,90', period: '/ano' },
+              ].map((option) => {
+                const availablePlan = subscriptionPlans.find((plan) => plan.identifier === option.id);
+                const isUnavailable = !billingAvailable || !availablePlan || purchasingPlan !== null;
+                return (
+                  <div key={option.id} className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{option.id === 'annual' ? 'Melhor custo-benefício' : 'Cobrança recorrente'}</p>
+                    <h3 className="mt-2 text-lg font-bold">{option.name}</h3>
+                    <p className="mt-3 text-2xl font-bold">{option.price} <span className="text-sm font-normal text-slate-500">{option.period}</span></p>
+                    <Button type="button" className="mt-4 w-full" disabled={isUnavailable} onClick={() => buySubscriptionPlan(availablePlan)}>
+                      {purchasingPlan === option.id ? 'Abrindo...' : billingAvailable ? 'Assinar' : 'Disponível no Android'}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+            {billingMessage && <p className="text-sm text-amber-700 dark:text-amber-300">{billingMessage}</p>}
           </CardContent>
         </Card>
 
