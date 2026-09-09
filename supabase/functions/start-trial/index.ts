@@ -28,19 +28,36 @@ Deno.serve(async (request) => {
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const email = user.email.trim().toLowerCase();
   const now = new Date().toISOString();
+  
   const { data: existingTrial, error: trialError } = await admin
-    .from('billing_trials').select('auth_user_id, ends_at').or(`auth_user_id.eq.${user.id},email.eq.${email}`).maybeSingle();
+    .from('entitlements')
+    .select('auth_user_id, access_ends_at')
+    .eq('access_type', 'trial')
+    .or(`auth_user_id.eq.${user.id},email.eq.${email}`)
+    .maybeSingle();
+
   if (trialError) return reply(500, { error: 'Could not verify trial access' });
+  
   if (existingTrial) {
     if (existingTrial.auth_user_id !== user.id) return reply(409, { error: 'Este e-mail já utilizou o teste gratuito.' });
-    if (new Date(existingTrial.ends_at).getTime() <= Date.now()) return reply(403, { error: 'O período de teste já terminou.' });
-    return reply(200, { status: 'active', trial_ends_at: existingTrial.ends_at });
+    if (existingTrial.access_ends_at && new Date(existingTrial.access_ends_at).getTime() <= Date.now()) {
+      return reply(403, { error: 'O período de teste já terminou.' });
+    }
+    return reply(200, { status: 'active', trial_ends_at: existingTrial.access_ends_at });
   }
 
   const endsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-  const { error: createError } = await admin.from('billing_trials').insert({
-    auth_user_id: user.id, email, starts_at: now, ends_at: endsAt, updated_at: now,
+  const { error: createError } = await admin.from('entitlements').insert({
+    auth_user_id: user.id,
+    email,
+    access_type: 'trial',
+    provider: 'internal',
+    status: 'active',
+    access_starts_at: now,
+    access_ends_at: endsAt,
+    updated_at: now,
   });
+
   if (createError) return reply(500, { error: 'Could not start trial access' });
   return reply(200, { status: 'active', trial_ends_at: endsAt });
 });

@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 
+const validAccessTypes = new Set(['trial', 'subscription', 'lifetime']);
+
 const AuthContext = createContext({
   isLoadingAuth: false,
   isLoadingPublicSettings: false,
@@ -47,7 +49,7 @@ export function AuthProvider({ children }) {
       const status = data?.status ?? 'no_license';
       setAccessStatus(status);
       setIsAdmin(Boolean(data?.is_admin));
-      setAccessType(data?.access_type ?? null);
+      setAccessType(validAccessTypes.has(data?.access_type) ? data.access_type : null);
       setTrialEndsAt(data?.trial_ends_at ?? null);
       setAccessEndsAt(data?.access_ends_at ?? data?.trial_ends_at ?? null);
       return status;

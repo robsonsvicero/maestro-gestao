@@ -6,7 +6,7 @@ Este projeto utiliza o Capacitor para empacotar a aplicação web como um aplica
 
 - **Localização do `build.gradle` (app/module):** O arquivo principal de configuração do módulo do aplicativo está localizado em `android/app/build.gradle`. As variáveis de versão estão definidas em `android/variables.gradle`.
 - **Versão do SDK Alvo (Target SDK):** Atualmente, a versão alvo (`targetSdkVersion`) está configurada para **36** (conforme definido em `android/variables.gradle`).
-- **Google Play Billing:** **Não há**, no momento, nenhuma integração nativa com a Google Play Billing configurada no projeto (nenhum plugin do Capacitor ou dependência correspondente no `package.json` ou `build.gradle`).
+- **Google Play Billing:** a integração nativa usa `@capgo/native-purchases` e está isolada em `src/services/billing/googlePlayBilling.js`. A compra só é reconhecida depois da validação pela Edge Function `google-play-verify`.
 
 ## ⚠️ Atenção: Arquivos Sensíveis
 

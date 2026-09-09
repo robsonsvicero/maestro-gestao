@@ -39,40 +39,17 @@ Deno.serve(async (request) => {
   const email = user.email.trim().toLowerCase();
   const now = new Date().toISOString();
 
-  const { data: customer, error: customerError } = await admin
-    .from('billing_customers')
-    .select('id, auth_user_id')
-    .eq('email', email)
-    .maybeSingle();
-  if (customerError) return reply(500, { error: 'Could not verify the customer record' });
+  const { data: entitlement, error: entitlementError } = await admin
+    .from('entitlements')
+    .select('access_type, access_ends_at, status')
+    .eq('auth_user_id', user.id)
+    .in('status', ['active', 'grace_period', 'canceled'])
+    .is('revoked_at', null)
+    .or(`access_ends_at.is.null,access_ends_at.gt.${now}`)
+    .order('access_type', { ascending: false }) // Prioridade: lifetime, trial, subscription (nós precisamos ordenar logicamente ou processar em memória)
+    .limit(10); // Busca todos ativos do usuário
 
-  if (customer?.auth_user_id && customer.auth_user_id !== user.id) {
-    return reply(409, { status: 'license_already_linked' });
-  }
-
-  let hasActiveLicense = false;
-  let activeEntitlement: { access_ends_at: string | null } | null = null;
-  if (customer) {
-    const { data: entitlement, error: entitlementError } = await admin
-      .from('billing_entitlements')
-      .select('id, access_ends_at')
-      .eq('customer_id', customer.id)
-      .eq('status', 'active')
-      .is('revoked_at', null)
-      .or(`access_ends_at.is.null,access_ends_at.gt.${now}`)
-      .limit(1)
-      .maybeSingle();
-    if (entitlementError) return reply(500, { error: 'Could not verify entitlement' });
-    if (entitlement) {
-      const { error: linkError } = await admin
-        .from('billing_customers')
-        .update({ auth_user_id: user.id, updated_at: now })
-        .eq('id', customer.id);
-      if (linkError) return reply(500, { error: 'Could not link license to user' });
-      hasActiveLicense = true;
-      activeEntitlement = entitlement;
-    }
-  }
+  if (entitlementError) return reply(500, { error: 'Could not verify entitlement' });
 
   const { error: profileError } = await admin.from('profiles').upsert({
     id: user.id,
@@ -80,27 +57,25 @@ Deno.serve(async (request) => {
     full_name: user.user_metadata?.full_name ?? user.email.split('@')[0],
     role: profile?.role ?? 'user',
   }, { onConflict: 'id' });
+  
   if (profileError) return reply(500, { error: 'Could not initialize user profile' });
 
-  if (hasActiveLicense) return reply(200, {
-    status: 'active',
-    access_type: 'paid',
-    access_ends_at: activeEntitlement?.access_ends_at ?? null,
-  });
-
-  const { data: trial, error: trialError } = await admin
-    .from('billing_trials')
-    .select('auth_user_id, email, ends_at')
-    .or(`auth_user_id.eq.${user.id},email.eq.${email}`)
-    .maybeSingle();
-  if (trialError) return reply(500, { error: 'Could not verify trial access' });
-
-  if (trial) {
-    if (trial.auth_user_id !== user.id) return reply(409, { status: 'trial_already_claimed' });
-    if (new Date(trial.ends_at).getTime() <= Date.now()) {
-      return reply(403, { status: 'trial_expired', trial_ends_at: trial.ends_at });
+  if (entitlement && entitlement.length > 0) {
+    // Prioridade de acesso: lifetime > subscription > trial
+    let bestEntitlement = entitlement.find(e => e.access_type === 'lifetime');
+    if (!bestEntitlement) bestEntitlement = entitlement.find(e => e.access_type === 'subscription');
+    if (!bestEntitlement) bestEntitlement = entitlement.find(e => e.access_type === 'trial');
+    
+    if (bestEntitlement) {
+      if (bestEntitlement.access_type === 'trial') {
+         return reply(200, { status: 'active', access_type: 'trial', trial_ends_at: bestEntitlement.access_ends_at });
+      }
+      return reply(200, {
+        status: 'active',
+        access_type: bestEntitlement.access_type, // 'subscription' ou 'lifetime'
+        access_ends_at: bestEntitlement.access_ends_at,
+      });
     }
-    return reply(200, { status: 'active', access_type: 'trial', trial_ends_at: trial.ends_at });
   }
 
   return reply(403, { status: 'no_active_license' });
