@@ -11,6 +11,7 @@ const AuthContext = createContext({
   isAdmin: false,
   accessStatus: 'idle',
   accessType: null,
+  accessReason: null,
   trialEndsAt: null,
   accessEndsAt: null,
   refreshAccess: async () => 'idle',
@@ -24,6 +25,7 @@ export function AuthProvider({ children }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [accessStatus, setAccessStatus] = useState('idle');
   const [accessType, setAccessType] = useState(null);
+  const [accessReason, setAccessReason] = useState(null);
   const [trialEndsAt, setTrialEndsAt] = useState(null);
   const [accessEndsAt, setAccessEndsAt] = useState(null);
   const sessionUserId = useRef(null);
@@ -34,6 +36,7 @@ export function AuthProvider({ children }) {
       setAccessStatus('idle');
       setIsAdmin(false);
       setAccessType(null);
+      setAccessReason(null);
       setTrialEndsAt(null);
       setAccessEndsAt(null);
       return 'idle';
@@ -51,12 +54,14 @@ export function AuthProvider({ children }) {
       setAccessStatus(status);
       setIsAdmin(Boolean(data?.is_admin));
       setAccessType(validAccessTypes.has(data?.access_type) ? data.access_type : null);
+      setAccessReason(data?.access_reason ?? null);
       setTrialEndsAt(data?.trial_ends_at ?? null);
       setAccessEndsAt(data?.access_ends_at ?? data?.trial_ends_at ?? null);
       return status;
     } catch (error) {
       console.error('Erro ao verificar licença:', error);
       setAccessStatus('verification_error');
+      setAccessReason('verification_error');
       return 'verification_error';
     }
   };
@@ -99,6 +104,7 @@ export function AuthProvider({ children }) {
           setAccessStatus('idle');
           setIsAdmin(false);
           setAccessType(null);
+          setAccessReason(null);
           setTrialEndsAt(null);
           setAccessEndsAt(null);
           setIsLoadingAuth(false);
@@ -131,6 +137,7 @@ export function AuthProvider({ children }) {
       isAdmin,
       accessStatus,
       accessType,
+      accessReason,
       trialEndsAt,
       accessEndsAt,
       refreshAccess,
@@ -138,7 +145,7 @@ export function AuthProvider({ children }) {
         window.location.href = '/login';
       },
     }),
-    [accessStatus, accessEndsAt, accessType, authError, isAdmin, isLoadingAuth, session, trialEndsAt]
+    [accessReason, accessStatus, accessEndsAt, accessType, authError, isAdmin, isLoadingAuth, session, trialEndsAt]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

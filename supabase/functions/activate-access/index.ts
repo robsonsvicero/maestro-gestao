@@ -43,11 +43,9 @@ Deno.serve(async (request) => {
     .from('entitlements')
     .select('access_type, access_ends_at, status')
     .eq('auth_user_id', user.id)
-    .in('status', ['active', 'grace_period', 'canceled'])
     .is('revoked_at', null)
-    .or(`access_ends_at.is.null,access_ends_at.gt.${now}`)
-    .order('access_type', { ascending: false }) // Prioridade: lifetime, trial, subscription (nós precisamos ordenar logicamente ou processar em memória)
-    .limit(10); // Busca todos ativos do usuário
+    .order('created_at', { ascending: false })
+    .limit(10);
 
   if (entitlementError) return reply(500, { error: 'Could not verify entitlement' });
 
@@ -60,11 +58,16 @@ Deno.serve(async (request) => {
   
   if (profileError) return reply(500, { error: 'Could not initialize user profile' });
 
-  if (entitlement && entitlement.length > 0) {
+  const activeEntitlements = (entitlement ?? []).filter((item) =>
+    ['active', 'grace_period', 'canceled'].includes(item.status)
+    && (!item.access_ends_at || new Date(item.access_ends_at).getTime() > Date.now())
+  );
+
+  if (activeEntitlements.length > 0) {
     // Prioridade de acesso: lifetime > subscription > trial
-    let bestEntitlement = entitlement.find(e => e.access_type === 'lifetime');
-    if (!bestEntitlement) bestEntitlement = entitlement.find(e => e.access_type === 'subscription');
-    if (!bestEntitlement) bestEntitlement = entitlement.find(e => e.access_type === 'trial');
+    let bestEntitlement = activeEntitlements.find(e => e.access_type === 'lifetime');
+    if (!bestEntitlement) bestEntitlement = activeEntitlements.find(e => e.access_type === 'subscription');
+    if (!bestEntitlement) bestEntitlement = activeEntitlements.find(e => e.access_type === 'trial');
     
     if (bestEntitlement) {
       if (bestEntitlement.access_type === 'trial') {
@@ -78,5 +81,8 @@ Deno.serve(async (request) => {
     }
   }
 
-  return reply(403, { status: 'no_active_license' });
+  return reply(200, {
+    status: 'no_access',
+    access_reason: entitlement?.[0]?.status ?? 'no_license',
+  });
 });
