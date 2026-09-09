@@ -98,7 +98,11 @@ const AuthenticatedApp = () => {
       <Route path="/definir-senha" element={<Pages.SetPassword />} />
       <Route path="/primeiro-acesso" element={<Pages.FirstAccess />} />
       <Route path="/ativar-acesso" element={<Pages.ActivateAccess />} />
-      <Route path="/admin-licenses" element={<Pages.AdminLicenses />} />
+      <Route path="/admin-licenses" element={
+        <LayoutWrapper currentPageName="AdminLicenses">
+          <Pages.AdminLicenses />
+        </LayoutWrapper>
+      } />
       <Route path="/" element={
         isAdmin ? <Navigate to="/admin-licenses" replace /> :
         <LayoutWrapper currentPageName={mainPageKey}>

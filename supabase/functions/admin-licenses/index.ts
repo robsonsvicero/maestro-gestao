@@ -75,18 +75,43 @@ Deno.serve(async (request) => {
   if (entitlementError || profileError || eventError) return reply(500, { error: entitlementError?.message ?? profileError?.message ?? eventError?.message });
 
   const entitlementsByUser = new Map();
+  const entitlementsByEmail = new Map();
   for (const entitlement of entitlements ?? []) {
     const entries = entitlementsByUser.get(entitlement.auth_user_id) ?? [];
     entries.push(entitlement);
     entitlementsByUser.set(entitlement.auth_user_id, entries);
+    if (entitlement.email) {
+      const email = entitlement.email.trim().toLowerCase();
+      const emailEntries = entitlementsByEmail.get(email) ?? [];
+      emailEntries.push(entitlement);
+      entitlementsByEmail.set(email, emailEntries);
+    }
   }
-  const customers = (profiles ?? []).map((profile) => ({
+  const customers = (profiles ?? []).map((profile) => {
+    const byId = entitlementsByUser.get(profile.id) ?? [];
+    const byEmail = profile.email ? entitlementsByEmail.get(profile.email.trim().toLowerCase()) ?? [] : [];
+    const merged = [...byId, ...byEmail.filter((entitlement) => !byId.some((item) => item.id === entitlement.id))];
+    return {
     id: profile.id,
     email: profile.email,
     name: profile.full_name,
     auth_user_id: profile.id,
-    entitlements: entitlementsByUser.get(profile.id) ?? [],
-  }));
+    entitlements: merged,
+    };
+  });
+
+  const knownEntitlementIds = new Set(customers.flatMap((customer) => customer.entitlements.map((entitlement) => entitlement.id)));
+  for (const entitlement of entitlements ?? []) {
+    if (!knownEntitlementIds.has(entitlement.id)) {
+      customers.push({
+        id: entitlement.id,
+        email: entitlement.email,
+        name: null,
+        auth_user_id: entitlement.auth_user_id,
+        entitlements: [entitlement],
+      });
+    }
+  }
 
   return reply(200, { customers, events: events ?? [], products: [] });
 });
