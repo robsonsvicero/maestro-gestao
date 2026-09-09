@@ -18,7 +18,6 @@ Deno.serve(async (request) => {
   const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   const url = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const appUrl = Deno.env.get('APP_URL')?.replace(/\/$/, '');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
   if (!token || !url || !serviceRoleKey) return reply(401, { error: 'Unauthorized' });
 
@@ -36,8 +35,7 @@ Deno.serve(async (request) => {
     email?: string;
     name?: string;
     phone?: string;
-    productId?: string;
-    status?: 'pending' | 'active' | 'expired' | 'revoked';
+    status?: 'pending' | 'active' | 'grace_period' | 'on_hold' | 'canceled' | 'expired' | 'revoked';
     accessEndsAt?: string | null;
   } = {};
   try { body = await request.json(); } catch { /* empty body lists licenses */ }
@@ -45,65 +43,14 @@ Deno.serve(async (request) => {
 
   if (body.action === 'create_license') {
     const email = body.email?.trim().toLowerCase();
-    if (!email || !body.productId) return reply(400, { error: 'E-mail e produto são obrigatórios.' });
-    if (!['pending', 'active', 'expired', 'revoked'].includes(body.status ?? 'active')) {
-      return reply(400, { error: 'Status de licença inválido.' });
-    }
-
-    const { data: product, error: productError } = await admin
-      .from('billing_products')
-      .select('id')
-      .eq('id', body.productId)
-      .eq('active', true)
-      .maybeSingle();
-    if (productError) return reply(500, { error: `Falha ao consultar o produto: ${productError.message}` });
-    if (!product) return reply(400, { error: `Produto não encontrado ou inativo. ID recebido: ${body.productId}` });
-
-    const { data: customer, error: customerError } = await admin
-      .from('billing_customers')
-      .upsert({ email, name: body.name?.trim() || null, phone: body.phone?.trim() || null, updated_at: now }, { onConflict: 'email' })
-      .select('id, auth_user_id')
-      .single();
-    if (customerError || !customer) return reply(500, { error: customerError?.message ?? 'Não foi possível criar o cliente.' });
-
-    const status = body.status ?? 'active';
-    const { error: entitlementError } = await admin.from('billing_entitlements').upsert({
-      customer_id: customer.id,
-      product_id: product.id,
-      status,
-      access_starts_at: now,
-      access_ends_at: body.accessEndsAt || null,
-      revoked_at: status === 'revoked' ? now : null,
-      updated_at: now,
-    }, { onConflict: 'customer_id,product_id' });
-    if (entitlementError) return reply(500, { error: entitlementError.message });
-
-    let inviteSent = false;
-    let inviteWarning: string | null = null;
-    if (status === 'active' && !customer.auth_user_id) {
-      if (!appUrl) {
-        inviteWarning = 'Licença criada, mas o convite não foi enviado: configure o secret APP_URL.';
-      } else {
-        const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-          redirectTo: `${appUrl}/definir-senha`,
-          data: { full_name: body.name?.trim() || null },
-        });
-        if (inviteError) {
-          inviteWarning = /already (registered|exists)|already been registered/i.test(inviteError.message)
-            ? 'A licença foi criada, mas este e-mail já possui conta. Oriente o professor a usar “1º acesso” ou “Esqueci minha senha”.'
-            : 'A licença foi criada, mas não foi possível enviar o convite por e-mail.';
-        } else {
-          inviteSent = true;
-        }
-      }
-    }
-    return reply(200, { ok: true, invite_sent: inviteSent, invite_warning: inviteWarning });
+    if (!email) return reply(400, { error: 'E-mail é obrigatório.' });
+    return reply(400, { error: 'Use admin-create-lifetime-license para criar licenças vitalícias.' });
   }
 
   if (body.action === 'update_license' || body.action === 'revoke' || body.action === 'activate') {
     if (!body.entitlementId) return reply(400, { error: 'License id is required' });
     const status = body.action === 'revoke' ? 'revoked' : body.action === 'activate' ? 'active' : body.status;
-    if (!status || !['pending', 'active', 'expired', 'revoked'].includes(status)) {
+    if (!status || !['pending', 'active', 'grace_period', 'on_hold', 'canceled', 'expired', 'revoked'].includes(status)) {
       return reply(400, { error: 'Status de licença inválido.' });
     }
     const update = {
@@ -112,27 +59,34 @@ Deno.serve(async (request) => {
       access_ends_at: body.accessEndsAt || null,
       updated_at: now,
     };
-    const { error } = await admin.from('billing_entitlements').update(update).eq('id', body.entitlementId);
+    const { error } = await admin.from('entitlements').update(update).eq('id', body.entitlementId);
     if (error) return reply(500, { error: error.message });
     return reply(200, { ok: true });
   }
 
-  const [{ data: customers, error: customerError }, { data: events, error: eventError }, { data: products, error: productError }] = await Promise.all([
-    admin.from('billing_customers').select(`
-      id, email, name, phone, auth_user_id, created_at,
-      billing_entitlements (
-        id, status, access_starts_at, access_ends_at, revoked_at, updated_at,
-        billing_products ( name, kiwify_product_id ),
-        billing_subscriptions ( status, current_period_end, canceled_at )
-      )
-    `).order('created_at', { ascending: false }),
-    admin.from('billing_webhook_events')
-      .select('id, event_type, processing_status, processing_error, kiwify_order_id, received_at')
-      .order('received_at', { ascending: false })
+  const [{ data: entitlements, error: entitlementError }, { data: profiles, error: profileError }, { data: events, error: eventError }] = await Promise.all([
+    admin.from('entitlements').select('id, auth_user_id, email, access_type, provider, product_id, base_plan_id, status, access_starts_at, access_ends_at, auto_renewing, canceled_at, revoked_at, created_at, updated_at').order('created_at', { ascending: false }),
+    admin.from('profiles').select('id, email, full_name, role').order('email'),
+    admin.from('subscription_events')
+      .select('id, event_type, processing_status, processing_error, product_id, base_plan_id, created_at, processed_at')
+      .order('created_at', { ascending: false })
       .limit(20),
-    admin.from('billing_products').select('id, name, kiwify_product_id, active').order('name'),
   ]);
-  if (customerError || eventError || productError) return reply(500, { error: customerError?.message ?? eventError?.message ?? productError?.message });
+  if (entitlementError || profileError || eventError) return reply(500, { error: entitlementError?.message ?? profileError?.message ?? eventError?.message });
 
-  return reply(200, { customers: customers ?? [], events: events ?? [], products: products ?? [] });
+  const entitlementsByUser = new Map();
+  for (const entitlement of entitlements ?? []) {
+    const entries = entitlementsByUser.get(entitlement.auth_user_id) ?? [];
+    entries.push(entitlement);
+    entitlementsByUser.set(entitlement.auth_user_id, entries);
+  }
+  const customers = (profiles ?? []).map((profile) => ({
+    id: profile.id,
+    email: profile.email,
+    name: profile.full_name,
+    auth_user_id: profile.id,
+    entitlements: entitlementsByUser.get(profile.id) ?? [],
+  }));
+
+  return reply(200, { customers, events: events ?? [], products: [] });
 });
