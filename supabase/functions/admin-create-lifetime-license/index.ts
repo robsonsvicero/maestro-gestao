@@ -50,21 +50,33 @@ Deno.serve(async (request) => {
   }
 
   const emailToGrant = body.email?.trim()?.toLowerCase();
-  if (!emailToGrant) return reply(400, { error: 'Missing email' });
+  if (!emailToGrant) return reply(400, { error: 'E-mail é obrigatório.' });
 
-  const { data: targetUser, error: targetUserError } = await admin
+  // Tenta localizar pelo perfil primeiro
+  const { data: targetProfile, error: profileLookupError } = await admin
     .from('profiles')
     .select('id')
     .eq('email', emailToGrant)
     .maybeSingle();
 
-  if (targetUserError || !targetUser) {
-    // If the user doesn't exist in profiles yet, they might not have signed up.
-    return reply(404, { error: 'User not found in system. Please ensure they have signed up.' });
+  if (profileLookupError) return reply(500, { error: 'Erro ao buscar perfil do usuário.' });
+
+  let targetUserId: string | null = targetProfile?.id ?? null;
+
+  // Se não encontrou no profiles, tenta em auth.users (usuário criou conta mas ainda não fez 1º login)
+  if (!targetUserId) {
+    const { data: authUsers, error: authLookupError } = await admin.auth.admin.listUsers();
+    if (authLookupError) return reply(500, { error: 'Erro ao consultar usuários.' });
+    const found = authUsers?.users?.find((u) => u.email?.toLowerCase() === emailToGrant);
+    if (found) targetUserId = found.id;
+  }
+
+  if (!targetUserId) {
+    return reply(404, { error: `Nenhuma conta encontrada para o e-mail "${emailToGrant}". O usuário precisa criar uma conta antes de receber uma licença.` });
   }
 
   const { error: insertError } = await admin.from('entitlements').insert({
-    auth_user_id: targetUser.id,
+    auth_user_id: targetUserId,
     email: emailToGrant,
     access_type: 'lifetime',
     provider: 'internal',
@@ -73,7 +85,10 @@ Deno.serve(async (request) => {
     access_ends_at: null,
   });
 
-  if (insertError) return reply(500, { error: 'Failed to create lifetime license' });
+  if (insertError) {
+    console.error('Erro ao inserir entitlement:', insertError);
+    return reply(500, { error: 'Não foi possível criar a licença. Tente novamente.' });
+  }
 
   return reply(200, { status: 'success', message: 'Lifetime license created successfully' });
 });

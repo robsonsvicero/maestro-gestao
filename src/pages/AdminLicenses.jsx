@@ -40,7 +40,15 @@ export default function AdminLicenses() {
   const createLicense = useMutation({
     mutationFn: async (values) => {
       const { data, error } = await supabase.functions.invoke('admin-create-lifetime-license', { body: { email: values.email } });
-      if (error) throw error;
+      if (error) {
+        // Tenta extrair a mensagem real do corpo da resposta da Edge Function
+        let realMessage = error.message || 'Não foi possível criar a licença.';
+        try {
+          const body = await error?.context?.json?.();
+          if (body?.error) realMessage = body.error;
+        } catch { /* ignora erro ao parsear */ }
+        throw new Error(realMessage);
+      }
       if (data?.error) throw new Error(data.error);
       return data;
     },

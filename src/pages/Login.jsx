@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
@@ -10,9 +10,12 @@ import { Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false); const [isRecoveryMode, setIsRecoveryMode] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(() => searchParams.get('blocked') ?? '');
+  const [message, setMessage] = useState('');
   const getErrorMessageForAccess = (status, reason) => {
     if (status === 'email_confirmation_required') {
       return 'Seu e-mail ainda não foi confirmado. Verifique a caixa de entrada do seu e-mail para confirmar a conta antes de entrar.';
@@ -45,21 +48,38 @@ export default function Login() {
     if (accessError) {
       // Se a Edge Function retornou status HTTP de erro (ex: 403 email_confirmation_required)
       const errorStatus = accessError?.context?.status || accessError?.status;
+      let msg;
       if (errorStatus === 403 || access?.status === 'email_confirmation_required') {
-        await supabase.auth.signOut();
-        throw new Error('Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada para confirmar a conta antes de entrar.');
+        msg = 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada para confirmar a conta antes de entrar.';
+      } else {
+        msg = accessError.message || 'Não foi possível verificar seu acesso.';
       }
       await supabase.auth.signOut();
-      throw new Error(accessError.message || 'Não foi possível verificar seu acesso.');
+      // Redireciona para /login com a mensagem codificada na URL, pois o signOut
+      // dispara um re-mount do componente via AuthContext → App.jsx.
+      navigate(`/login?blocked=${encodeURIComponent(msg)}`, { replace: true });
+      return;
     }
 
     if (access?.status !== 'active') {
+      const msg = getErrorMessageForAccess(access?.status, access?.access_reason);
       await supabase.auth.signOut();
-      throw new Error(getErrorMessageForAccess(access?.status, access?.access_reason));
+      navigate(`/login?blocked=${encodeURIComponent(msg)}`, { replace: true });
+      return;
     }
 
     navigate(access?.is_admin ? '/admin-licenses' : createPageUrl('Schedule'), { replace: true });
   };
+
+  // Lê mensagem de bloqueio da URL (ex: /login?blocked=...) e limpa o parâmetro
+  useEffect(() => {
+    const blocked = searchParams.get('blocked');
+    if (blocked) {
+      setError(blocked);
+      // Remove o parâmetro da URL sem re-renderizar
+      setSearchParams({}, { replace: true });
+    }
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession()
@@ -92,6 +112,7 @@ export default function Login() {
       try {
         await navigateAfterLogin(data.session);
       } catch (accessError) {
+        // Erros inesperados que não foram tratados dentro de navigateAfterLogin
         setError(accessError.message || 'Não foi possível verificar o acesso.');
       } finally {
         setIsSubmitting(false);
