@@ -32,7 +32,7 @@ export default function AdminLicenses() {
   const [showCreate, setShowCreate] = useState(false);
   const [createError, setCreateError] = useState('');
   const [createMessage, setCreateMessage] = useState('');
-  const [form, setForm] = useState({ email: '' });
+  const [form, setForm] = useState({ email: '', name: '' });
   const [edits, setEdits] = useState({});
   const { data, isLoading, error } = useQuery({ queryKey: ['admin-licenses'], queryFn: () => invokeAdmin() });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin-licenses'] });
@@ -52,7 +52,7 @@ export default function AdminLicenses() {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: () => { setForm({ email: '' }); setCreateError(''); setCreateMessage('Licença vitalícia criada com sucesso.'); refresh(); },
+    onSuccess: (result) => { setForm({ email: '', name: '' }); setCreateError(''); setCreateMessage(result?.message || 'Licença vitalícia criada com sucesso.'); refresh(); },
     onError: (mutationError) => setCreateError(mutationError.message || 'Não foi possível criar a licença.'),
   });
   const updateLicense = useMutation({
@@ -70,8 +70,9 @@ export default function AdminLicenses() {
   return <div className="w-full max-w-none space-y-6 p-4 md:p-8">
     <div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Licenças</h1><p className="mt-1 text-slate-600 dark:text-slate-400">Gerencie licenças manuais, validade e acesso dos professores.</p></div><div className="flex gap-2"><Button onClick={() => setShowCreate((visible) => !visible)}><Plus className="mr-2 h-4 w-4" />Nova licença</Button><Button variant="outline" onClick={refresh}><RefreshCw className="mr-2 h-4 w-4" />Atualizar</Button></div></div>
 
-    {showCreate && <Card className="w-full p-4 md:p-6"><h2 className="text-lg font-semibold">Incluir licença vitalícia</h2><p className="mt-1 text-sm text-slate-500">O e-mail precisa ter uma conta MAEZTRO cadastrada.</p><form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={(event) => { event.preventDefault(); setCreateError(''); setCreateMessage(''); createLicense.mutate(form); }}>
+    {showCreate && <Card className="w-full p-4 md:p-6"><h2 className="text-lg font-semibold">Incluir licença vitalícia</h2><p className="mt-1 text-sm text-slate-500">Se o e-mail ainda não tiver uma conta MAEZTRO, ela será criada automaticamente e um convite será enviado ao usuário para definir a senha.</p><form className="mt-5 grid gap-4 md:grid-cols-3" onSubmit={(event) => { event.preventDefault(); setCreateError(''); setCreateMessage(''); createLicense.mutate(form); }}>
       <div className="space-y-2"><Label htmlFor="license-email">E-mail *</Label><Input id="license-email" type="email" required value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="professor@exemplo.com" /></div>
+      <div className="space-y-2"><Label htmlFor="license-name">Nome (opcional)</Label><Input id="license-name" type="text" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Nome do professor" /></div>
       <div className="flex flex-wrap items-end gap-3"><Button type="submit" disabled={createLicense.isPending}><CheckCircle2 className="mr-2 h-4 w-4" />{createLicense.isPending ? 'Incluindo...' : 'Incluir licença'}</Button>{createError && <p className="text-sm text-red-600">{createError}</p>}{createMessage && <p className="text-sm text-emerald-700">{createMessage}</p>}</div>
     </form></Card>}
 
