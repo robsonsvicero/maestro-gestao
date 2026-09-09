@@ -83,7 +83,7 @@ const AuthenticatedApp = () => {
     return <Navigate to="/login" replace />;
   }
 
-  if (isAuthenticated && accessStatus === 'idle') {
+  if (isAuthenticated && (accessStatus === 'idle' || accessStatus === 'checking')) {
     return <AppAccessLoadingScreen />;
   }
 

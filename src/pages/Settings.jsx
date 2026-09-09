@@ -156,6 +156,16 @@ export default function Settings() {
 
   const updateMutation = useMutation({
     mutationFn: async (data) => {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw userError || new Error('Sessão inválida.');
+
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: user.id,
+        email: user.email,
+        full_name: data.professional_name.trim() || user.email?.split('@')[0] || 'Usuário',
+      }, { onConflict: 'id' });
+      if (profileError) throw profileError;
+
       const { data: existingRows, error: rowsError } = await supabase
         .from('app_settings')
         .select('id')
