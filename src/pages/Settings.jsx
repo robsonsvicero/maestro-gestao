@@ -123,6 +123,10 @@ export default function Settings() {
     }
   };
 
+  const cancelKiwifySubscription = () => {
+    setBillingMessage('Para cancelar sua assinatura, abra o e-mail da Kiwify com o assunto “Pagamento de assinatura aprovado” e clique em “Gerenciar assinatura”. Por segurança, o cancelamento é concluído diretamente pela Kiwify.');
+  };
+
   const currentPlanLabel = accessType === 'trial'
     ? 'Teste gratuito'
     : accessType === 'lifetime'
@@ -387,6 +391,12 @@ export default function Settings() {
               </div>
               {accessType === 'subscription' && accessProvider === 'google_play' && (
                 <Button type="button" variant="outline" className="mt-4 border-red-200 text-red-700 hover:bg-red-50" onClick={cancelSubscription}>
+                  <XCircle className="h-4 w-4" />
+                  Cancelar assinatura
+                </Button>
+              )}
+              {accessType === 'subscription' && accessProvider === 'kiwify' && (
+                <Button type="button" variant="outline" className="mt-4 border-red-200 text-red-700 hover:bg-red-50" onClick={cancelKiwifySubscription}>
                   <XCircle className="h-4 w-4" />
                   Cancelar assinatura
                 </Button>
