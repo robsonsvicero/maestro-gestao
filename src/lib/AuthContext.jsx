@@ -11,6 +11,7 @@ const AuthContext = createContext({
   isAdmin: false,
   accessStatus: 'idle',
   accessType: null,
+  accessProvider: null,
   accessReason: null,
   trialEndsAt: null,
   accessEndsAt: null,
@@ -25,6 +26,7 @@ export function AuthProvider({ children }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [accessStatus, setAccessStatus] = useState('idle');
   const [accessType, setAccessType] = useState(null);
+  const [accessProvider, setAccessProvider] = useState(null);
   const [accessReason, setAccessReason] = useState(null);
   const [trialEndsAt, setTrialEndsAt] = useState(null);
   const [accessEndsAt, setAccessEndsAt] = useState(null);
@@ -36,6 +38,7 @@ export function AuthProvider({ children }) {
       setAccessStatus('idle');
       setIsAdmin(false);
       setAccessType(null);
+      setAccessProvider(null);
       setAccessReason(null);
       setTrialEndsAt(null);
       setAccessEndsAt(null);
@@ -54,6 +57,7 @@ export function AuthProvider({ children }) {
       setAccessStatus(status);
       setIsAdmin(Boolean(data?.is_admin));
       setAccessType(validAccessTypes.has(data?.access_type) ? data.access_type : null);
+      setAccessProvider(data?.provider ?? null);
       setAccessReason(data?.access_reason ?? null);
       setTrialEndsAt(data?.trial_ends_at ?? null);
       setAccessEndsAt(data?.access_ends_at ?? data?.trial_ends_at ?? null);
@@ -104,6 +108,7 @@ export function AuthProvider({ children }) {
           setAccessStatus('idle');
           setIsAdmin(false);
           setAccessType(null);
+          setAccessProvider(null);
           setAccessReason(null);
           setTrialEndsAt(null);
           setAccessEndsAt(null);
@@ -137,6 +142,7 @@ export function AuthProvider({ children }) {
       isAdmin,
       accessStatus,
       accessType,
+      accessProvider,
       accessReason,
       trialEndsAt,
       accessEndsAt,
@@ -145,7 +151,7 @@ export function AuthProvider({ children }) {
         window.location.href = '/login';
       },
     }),
-    [accessReason, accessStatus, accessEndsAt, accessType, authError, isAdmin, isLoadingAuth, session, trialEndsAt]
+    [accessProvider, accessReason, accessStatus, accessEndsAt, accessType, authError, isAdmin, isLoadingAuth, session, trialEndsAt]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

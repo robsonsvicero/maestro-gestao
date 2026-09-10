@@ -32,8 +32,9 @@ ao criar aulas mensais pela rotina do banco.
 
 ## Fase 2 — Kiwify
 
-Execute `billing_schema.sql` antes de publicar a Edge Function. As instruções
-de secrets, deploy e teste ficam em `functions/kiwify-webhook/README.md`.
+Execute `google_play_billing_schema.sql` e, se ele já tiver sido executado,
+`kiwify_entitlements_migration.sql` antes de publicar a Edge Function. As
+instruções de secrets, deploy e teste ficam em `functions/kiwify-webhook/README.md`.
 
 ## Fase 3 — ativação do comprador
 
@@ -43,9 +44,9 @@ Publique também a Edge Function `activate-access`:
 supabase functions deploy activate-access --no-verify-jwt
 ```
 
-O professor cria uma conta com o mesmo e-mail usado na compra, confirma o
-e-mail e acessa `/ativar-acesso`. A função vincula a conta à licença ativa e o
-aplicativo só libera as telas internas depois dessa confirmação.
+Na compra Kiwify aprovada, o webhook cria e convida a conta com o e-mail do
+comprador. O professor define a senha pelo link recebido e acessa tanto o site
+quanto o app futuro com essa mesma conta.
 
 ## Administração de licenças
 

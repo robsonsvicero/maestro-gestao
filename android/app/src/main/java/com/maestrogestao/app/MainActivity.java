@@ -1,4 +1,4 @@
-package com.maestrogestao.app;
+package com.maeztrogestao.app;
 
 import com.getcapacitor.BridgeActivity;
 

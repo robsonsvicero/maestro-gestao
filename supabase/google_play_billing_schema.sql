@@ -4,10 +4,11 @@ create table if not exists public.entitlements (
   auth_user_id uuid not null references auth.users(id) on delete cascade,
   email text,
   access_type text not null check (access_type in ('subscription', 'trial', 'lifetime')),
-  provider text not null check (provider in ('google_play', 'internal')),
+  provider text not null check (provider in ('google_play', 'kiwify', 'internal')),
   product_id text,
   base_plan_id text,
   purchase_token text unique,
+  provider_reference text,
   status text not null check (status in ('pending', 'active', 'grace_period', 'on_hold', 'canceled', 'expired', 'revoked')),
   access_starts_at timestamptz not null default now(),
   access_ends_at timestamptz,
@@ -38,6 +39,9 @@ create table if not exists public.subscription_events (
 -- 3. Índices para performance
 create index if not exists entitlements_auth_user_id_idx on public.entitlements(auth_user_id);
 create index if not exists entitlements_purchase_token_idx on public.entitlements(purchase_token);
+create unique index if not exists entitlements_provider_reference_key
+  on public.entitlements(provider, provider_reference)
+  where provider_reference is not null;
 create index if not exists subscription_events_purchase_token_idx on public.subscription_events(purchase_token);
 
 -- 4. RLS (Row Level Security)

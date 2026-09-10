@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Maestro Gestão</string>
     <string name="title_activity_main">Maestro Gestão</string>
-    <string name="package_name">com.maestrogestao.app</string>
-    <string name="custom_url_scheme">com.maestrogestao.app</string>
+    <string name="package_name">com.maeztrogestao.app</string>
+    <string name="custom_url_scheme">com.maeztrogestao.app</string>
 </resources>

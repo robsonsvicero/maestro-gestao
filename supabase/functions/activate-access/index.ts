@@ -41,7 +41,7 @@ Deno.serve(async (request) => {
 
   const { data: entitlement, error: entitlementError } = await admin
     .from('entitlements')
-    .select('access_type, access_ends_at, status')
+    .select('access_type, provider, access_ends_at, status')
     .eq('auth_user_id', user.id)
     .is('revoked_at', null)
     .order('created_at', { ascending: false })
@@ -71,11 +71,12 @@ Deno.serve(async (request) => {
     
     if (bestEntitlement) {
       if (bestEntitlement.access_type === 'trial') {
-         return reply(200, { status: 'active', access_type: 'trial', trial_ends_at: bestEntitlement.access_ends_at });
+        return reply(200, { status: 'active', access_type: 'trial', provider: bestEntitlement.provider, trial_ends_at: bestEntitlement.access_ends_at });
       }
       return reply(200, {
         status: 'active',
         access_type: bestEntitlement.access_type, // 'subscription' ou 'lifetime'
+        provider: bestEntitlement.provider,
         access_ends_at: bestEntitlement.access_ends_at,
       });
     }

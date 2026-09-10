@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import { base44 } from "@/api/base44Client";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
@@ -12,9 +13,15 @@ import { Switch } from "@/components/ui/switch";
 import { Settings as SettingsIcon, Image, Upload, Lock, CalendarCheck, CreditCard, XCircle } from "lucide-react";
 import { formatPhone, unformatPhone } from "@/utils/formatUtils";
 
+const KIWIFY_CHECKOUTS = {
+  monthly: 'https://pay.kiwify.com.br/LNHszQc',
+  annual: 'https://pay.kiwify.com.br/h4t2yde',
+};
+const isAndroidApp = Capacitor.getPlatform() === 'android';
+
 export default function Settings() {
   const queryClient = useQueryClient();
-  const { accessType, accessStatus, accessEndsAt } = useAuth();
+  const { accessType, accessProvider, accessStatus, accessEndsAt } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [subscriptionPlans, setSubscriptionPlans] = useState([]);
   const [billingAvailable, setBillingAvailable] = useState(false);
@@ -103,6 +110,10 @@ export default function Settings() {
     }
   };
 
+  const buyKiwifyPlan = (planId) => {
+    window.location.assign(KIWIFY_CHECKOUTS[planId]);
+  };
+
   const cancelSubscription = async () => {
     setBillingMessage('');
     try {
@@ -117,7 +128,7 @@ export default function Settings() {
     : accessType === 'lifetime'
       ? 'Licença vitalícia'
       : accessType === 'subscription'
-        ? 'Assinatura Google Play'
+        ? accessProvider === 'kiwify' ? 'Assinatura Kiwify' : 'Assinatura Google Play'
         : accessStatus === 'active'
           ? 'Acesso administrativo'
           : 'Sem plano ativo';
@@ -126,7 +137,7 @@ export default function Settings() {
     : accessType === 'lifetime'
       ? 'Seu acesso não possui data de expiração.'
       : accessType === 'subscription'
-        ? 'Sua assinatura é gerenciada pelo Google Play.'
+        ? accessProvider === 'kiwify' ? 'Sua assinatura é gerenciada pela Kiwify.' : 'Sua assinatura é gerenciada pelo Google Play.'
         : 'Escolha um plano para continuar usando todos os recursos.';
 
   const handleLogoUpload = async (e) => {
@@ -374,7 +385,7 @@ export default function Settings() {
                   </span>
                 )}
               </div>
-              {accessType === 'subscription' && (
+              {accessType === 'subscription' && accessProvider === 'google_play' && (
                 <Button type="button" variant="outline" className="mt-4 border-red-200 text-red-700 hover:bg-red-50" onClick={cancelSubscription}>
                   <XCircle className="h-4 w-4" />
                   Cancelar assinatura
@@ -392,14 +403,15 @@ export default function Settings() {
                 { id: 'annual', name: 'Plano Anual', price: 'R$ 274,90', period: '/ano' },
               ].map((option) => {
                 const availablePlan = subscriptionPlans.find((plan) => plan.identifier === option.id);
-                const isUnavailable = !billingAvailable || !availablePlan || purchasingPlan !== null;
+                const usesKiwifyCheckout = !isAndroidApp;
+                const isUnavailable = usesKiwifyCheckout ? false : !billingAvailable || !availablePlan || purchasingPlan !== null;
                 return (
                   <div key={option.id} className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{option.id === 'annual' ? 'Melhor custo-benefício' : 'Cobrança recorrente'}</p>
                     <h3 className="mt-2 text-lg font-bold">{option.name}</h3>
                     <p className="mt-3 text-2xl font-bold">{option.price} <span className="text-sm font-normal text-slate-500">{option.period}</span></p>
-                    <Button type="button" className="mt-4 w-full" disabled={isUnavailable} onClick={() => buySubscriptionPlan(availablePlan)}>
-                      {purchasingPlan === option.id ? 'Abrindo...' : billingAvailable ? 'Assinar' : 'Disponível no Android'}
+                    <Button type="button" className="mt-4 w-full" disabled={isUnavailable} onClick={() => usesKiwifyCheckout ? buyKiwifyPlan(option.id) : buySubscriptionPlan(availablePlan)}>
+                      {purchasingPlan === option.id ? 'Abrindo...' : 'Quero este plano'}
                     </Button>
                   </div>
                 );

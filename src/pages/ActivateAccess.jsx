@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { getSubscriptionPlans, isGooglePlayBillingAvailable, purchaseSubscription, restoreSubscriptions } from '@/services/billing/googlePlayBilling';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+const KIWIFY_CHECKOUTS = {
+  monthly: 'https://pay.kiwify.com.br/LNHszQc',
+  annual: 'https://pay.kiwify.com.br/h4t2yde',
+};
+const isAndroidApp = Capacitor.getPlatform() === 'android';
 
 export default function ActivateAccess() {
   const navigate = useNavigate();
@@ -64,6 +71,10 @@ export default function ActivateAccess() {
     }
   };
 
+  const buyKiwifyPlan = (planId) => {
+    window.location.assign(KIWIFY_CHECKOUTS[planId]);
+  };
+
   const restore = async () => {
     setIsChecking(true);
     setMessage('Restaurando suas compras...');
@@ -93,19 +104,22 @@ export default function ActivateAccess() {
         </CardHeader>
         <CardContent className="space-y-3">
           {message && <p className="text-sm text-amber-700 dark:text-amber-300">{message}</p>}
-          {isBillingAvailable && (
+          {(isBillingAvailable || !isAndroidApp) && (
             <div className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
               <p className="text-sm font-medium">Escolha seu plano</p>
-              {isLoadingPlans && <p className="text-sm text-slate-500">Carregando planos...</p>}
-              {plans.map((plan) => (
-                <Button key={plan.identifier} className="w-full justify-between" onClick={() => buyPlan(plan)} disabled={isChecking || purchasingPlan !== null}>
-                  <span>{plan.identifier === 'annual' ? 'Plano anual' : 'Plano mensal'}</span>
-                  <span>{plan.priceString}</span>
-                </Button>
-              ))}
-              <Button className="w-full" variant="outline" onClick={restore} disabled={isChecking || purchasingPlan !== null}>
-                Restaurar compras
-              </Button>
+              {isAndroidApp ? <>
+                {isLoadingPlans && <p className="text-sm text-slate-500">Carregando planos...</p>}
+                {plans.map((plan) => (
+                  <Button key={plan.identifier} className="w-full justify-between" onClick={() => buyPlan(plan)} disabled={isChecking || purchasingPlan !== null}>
+                    <span>{plan.identifier === 'annual' ? 'Plano anual' : 'Plano mensal'}</span>
+                    <span>{plan.priceString}</span>
+                  </Button>
+                ))}
+                <Button className="w-full" variant="outline" onClick={restore} disabled={isChecking || purchasingPlan !== null}>Restaurar compras</Button>
+              </> : <>
+                <div className="flex items-center justify-between gap-3"><span className="text-sm">Plano mensal</span><Button onClick={() => buyKiwifyPlan('monthly')}>Quero este plano</Button></div>
+                <div className="flex items-center justify-between gap-3"><span className="text-sm">Plano anual</span><Button onClick={() => buyKiwifyPlan('annual')}>Quero este plano</Button></div>
+              </>}
             </div>
           )}
           <Button className="w-full" onClick={checkAccess} disabled={isChecking}>
