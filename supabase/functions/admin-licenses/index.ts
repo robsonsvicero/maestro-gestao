@@ -74,6 +74,17 @@ Deno.serve(async (request) => {
   ]);
   if (entitlementError || profileError || eventError) return reply(500, { error: entitlementError?.message ?? profileError?.message ?? eventError?.message });
 
+  // A existência da conta não significa que o professor já criou a senha ou
+  // entrou no sistema. last_sign_in_at é atualizado pelo Supabase Auth quando
+  // ele conclui seu primeiro acesso (incluindo o fluxo de convite/recuperação).
+  const authUsersById = new Map<string, { last_sign_in_at?: string | null }>();
+  for (let page = 1; page <= 100; page += 1) {
+    const { data, error: authUsersError } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (authUsersError) return reply(500, { error: 'Não foi possível consultar o status de primeiro acesso.' });
+    for (const authUser of data.users) authUsersById.set(authUser.id, { last_sign_in_at: authUser.last_sign_in_at });
+    if (data.users.length < 1000) break;
+  }
+
   const entitlementsByUser = new Map();
   const entitlementsByEmail = new Map();
   for (const entitlement of entitlements ?? []) {
@@ -96,6 +107,8 @@ Deno.serve(async (request) => {
     email: profile.email,
     name: profile.full_name,
     auth_user_id: profile.id,
+    first_access_completed: Boolean(authUsersById.get(profile.id)?.last_sign_in_at),
+    first_access_at: authUsersById.get(profile.id)?.last_sign_in_at ?? null,
     entitlements: merged,
     };
   });
@@ -108,6 +121,8 @@ Deno.serve(async (request) => {
         email: entitlement.email,
         name: null,
         auth_user_id: entitlement.auth_user_id,
+        first_access_completed: Boolean(authUsersById.get(entitlement.auth_user_id)?.last_sign_in_at),
+        first_access_at: authUsersById.get(entitlement.auth_user_id)?.last_sign_in_at ?? null,
         entitlements: [entitlement],
       });
     }
