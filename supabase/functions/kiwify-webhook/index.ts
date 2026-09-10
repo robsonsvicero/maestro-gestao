@@ -54,32 +54,43 @@ async function findAuthUserId(admin: ReturnType<typeof createClient>, email: str
 }
 
 Deno.serve(async (request) => {
+  console.info('Kiwify webhook received', { method: request.method });
   if (request.method !== 'POST') return reply(405, { error: 'Method not allowed' });
   if (!Deno.env.get('KIWIFY_WEBHOOK_TOKEN') || webhookToken(request) !== Deno.env.get('KIWIFY_WEBHOOK_TOKEN')) {
+    console.warn('Kiwify webhook rejected: invalid token');
     return reply(401, { error: 'Unauthorized' });
   }
 
   const url = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const appUrl = Deno.env.get('APP_URL')?.replace(/\/$/, '');
-  if (!url || !serviceRoleKey || !appUrl) return reply(500, { error: 'Function secrets are not configured' });
+  if (!url || !serviceRoleKey || !appUrl) {
+    console.error('Kiwify webhook rejected: required function secret is missing');
+    return reply(500, { error: 'Function secrets are not configured' });
+  }
 
   const rawBody = await request.text();
   let payload: KiwifyPayload;
-  try { payload = JSON.parse(rawBody); } catch { return reply(400, { error: 'Invalid JSON payload' }); }
+  try { payload = JSON.parse(rawBody); } catch {
+    console.warn('Kiwify webhook rejected: invalid JSON');
+    return reply(400, { error: 'Invalid JSON payload' });
+  }
 
   const email = normalizeEmail(payload.Customer?.email);
   const productId = payload.Product?.product_id;
   const reference = payload.Subscription?.subscription_id ?? payload.Subscription?.id ?? payload.order_id;
   const kind = eventKind(payload.webhook_event_type, payload.order_status);
   if (!/^\S+@\S+\.\S+$/.test(email) || !productId || !reference) {
+    console.warn('Kiwify webhook rejected: missing required purchase fields', { hasEmail: Boolean(email), hasProductId: Boolean(productId), hasReference: Boolean(reference) });
     return reply(400, { error: 'Missing customer email, product ID, or order/subscription ID' });
   }
   const permittedProducts = (Deno.env.get('KIWIFY_PRODUCT_IDS') ?? '').split(',').map((id) => id.trim()).filter(Boolean);
   if (permittedProducts.length > 0 && !permittedProducts.includes(productId)) {
+    console.warn('Kiwify webhook rejected: product is not allowed', { productId });
     return reply(403, { error: 'Product is not allowed' });
   }
   if (!['approved', 'renewed', 'late', 'canceled', 'refunded', 'chargeback'].includes(kind)) {
+    console.warn('Kiwify webhook rejected: unsupported event', { event: payload.webhook_event_type, orderStatus: payload.order_status });
     return reply(400, { error: `Unsupported event type: ${payload.webhook_event_type ?? payload.order_status ?? 'unknown'}` });
   }
 
@@ -87,7 +98,10 @@ Deno.serve(async (request) => {
   const eventId = `kiwify:${await sha256(rawBody)}`;
   const { data: existingEvent, error: eventError } = await admin
     .from('subscription_events').select('id, processing_status').eq('message_id', eventId).maybeSingle();
-  if (eventError) return reply(500, { error: 'Could not check webhook idempotency' });
+  if (eventError) {
+    console.error('Kiwify webhook failed while checking idempotency', { message: eventError.message });
+    return reply(500, { error: 'Could not check webhook idempotency' });
+  }
   if (existingEvent?.processing_status === 'processed') return reply(200, { received: true, duplicate: true });
 
   const { data: event, error: createEventError } = existingEvent
@@ -96,8 +110,12 @@ Deno.serve(async (request) => {
       provider: 'kiwify', event_type: payload.webhook_event_type ?? 'unknown', message_id: eventId,
       product_id: productId, payload, processing_status: 'received',
     }).select('id').single();
-  if (createEventError || !event) return reply(500, { error: 'Could not record webhook event' });
+  if (createEventError || !event) {
+    console.error('Kiwify webhook failed while recording event', { message: createEventError?.message });
+    return reply(500, { error: 'Could not record webhook event' });
+  }
   const fail = async (message: string) => {
+    console.error('Kiwify webhook processing failed', { message });
     await admin.from('subscription_events').update({ processing_status: 'failed', processing_error: message, processed_at: new Date().toISOString() }).eq('id', event.id);
     return reply(500, { error: message });
   };

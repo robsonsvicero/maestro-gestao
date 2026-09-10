@@ -34,7 +34,6 @@ Deno.serve(async (request) => {
   if (isAdmin) return reply(200, { status: 'active', is_admin: true });
 
   if (!user.email) return reply(403, { status: 'email_required' });
-  if (!user.email_confirmed_at) return reply(403, { status: 'email_confirmation_required' });
 
   const email = user.email.trim().toLowerCase();
   const now = new Date().toISOString();
@@ -81,6 +80,12 @@ Deno.serve(async (request) => {
       });
     }
   }
+
+  // O fluxo de primeiro acesso usa um link de recuperação de senha. Esse link
+  // autentica o titular do e-mail, porém pode não preencher email_confirmed_at
+  // em contas criadas por convite. Não bloquear uma licença já vinculada a uma
+  // sessão autenticada apenas por esse marcador.
+  if (!user.email_confirmed_at) return reply(403, { status: 'email_confirmation_required' });
 
   return reply(200, {
     status: 'no_access',
