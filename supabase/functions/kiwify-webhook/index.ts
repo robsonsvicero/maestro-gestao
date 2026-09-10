@@ -5,6 +5,7 @@ const reply = (status: number, body: Record<string, unknown>) => new Response(JS
 
 type KiwifyPayload = {
   order_id?: string;
+  order_status?: string;
   webhook_event_type?: string;
   Product?: { product_id?: string; product_name?: string };
   Customer?: { email?: string; full_name?: string };
@@ -24,11 +25,14 @@ const sha256 = async (value: string) => {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return [...new Uint8Array(digest)].map((part) => part.toString(16).padStart(2, '0')).join('');
 };
-const eventKind = (event?: string) => ({
+const eventKind = (event?: string, orderStatus?: string) => ({
   order_approved: 'approved', compra_aprovada: 'approved', subscription_renewed: 'renewed',
   subscription_late: 'late', subscription_canceled: 'canceled', order_refunded: 'refunded',
   compra_reembolsada: 'refunded', chargeback: 'chargeback',
-}[event?.toLowerCase() ?? ''] ?? 'unknown');
+}[event?.toLowerCase() ?? ''] ?? ({
+  paid: 'approved', approved: 'approved', renewed: 'renewed', late: 'late',
+  canceled: 'canceled', cancelled: 'canceled', refunded: 'refunded', chargeback: 'chargeback',
+}[orderStatus?.toLowerCase() ?? ''] ?? 'unknown'));
 const webhookToken = (request: Request) => {
   const authorization = request.headers.get('authorization');
   return new URL(request.url).searchParams.get('token') ?? request.headers.get('x-kiwify-token')
@@ -67,7 +71,7 @@ Deno.serve(async (request) => {
   const email = normalizeEmail(payload.Customer?.email);
   const productId = payload.Product?.product_id;
   const reference = payload.Subscription?.subscription_id ?? payload.Subscription?.id ?? payload.order_id;
-  const kind = eventKind(payload.webhook_event_type);
+  const kind = eventKind(payload.webhook_event_type, payload.order_status);
   if (!/^\S+@\S+\.\S+$/.test(email) || !productId || !reference) {
     return reply(400, { error: 'Missing customer email, product ID, or order/subscription ID' });
   }
@@ -76,7 +80,7 @@ Deno.serve(async (request) => {
     return reply(403, { error: 'Product is not allowed' });
   }
   if (!['approved', 'renewed', 'late', 'canceled', 'refunded', 'chargeback'].includes(kind)) {
-    return reply(400, { error: `Unsupported event type: ${payload.webhook_event_type ?? 'unknown'}` });
+    return reply(400, { error: `Unsupported event type: ${payload.webhook_event_type ?? payload.order_status ?? 'unknown'}` });
   }
 
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });

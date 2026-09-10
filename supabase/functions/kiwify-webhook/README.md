@@ -9,19 +9,21 @@ quanto pelo futuro aplicativo publicado na Google Play.
 
 1. Execute `supabase/kiwify_entitlements_migration.sql` uma vez no SQL Editor
    do Supabase.
-2. Defina os secrets. `KIWIFY_PRODUCT_IDS` é opcional, mas recomendado: informe
-   os IDs dos dois produtos na Kiwify separados por vírgula para impedir que
-   outro produto da conta conceda acesso.
+2. Copie o token gerado automaticamente pela Kiwify ao criar o webhook e use-o
+   como `KIWIFY_WEBHOOK_TOKEN`. `KIWIFY_PRODUCT_IDS` é opcional, mas recomendado:
+   informe os IDs dos dois produtos separados por vírgula para impedir que outro
+   produto da conta conceda acesso.
 
 ```bash
-supabase secrets set KIWIFY_WEBHOOK_TOKEN="gere-um-segredo-longo"
+supabase secrets set KIWIFY_WEBHOOK_TOKEN="TOKEN_GERADO_PELA_KIWIFY"
 supabase secrets set APP_URL="https://seu-dominio.com"
 supabase secrets set KIWIFY_PRODUCT_IDS="ID_PRODUTO_MENSAL,ID_PRODUTO_ANUAL"
 supabase functions deploy kiwify-webhook --no-verify-jwt
 supabase functions deploy first-access --no-verify-jwt
 ```
 
-3. Na Kiwify, cadastre esta URL de webhook (com o mesmo segredo):
+3. Na Kiwify, cadastre esta URL de webhook, substituindo o token pelo mesmo
+   token gerado pela Kiwify:
 
 ```text
 https://SEU-PROJETO.supabase.co/functions/v1/kiwify-webhook?token=SEU-SEGREDO
