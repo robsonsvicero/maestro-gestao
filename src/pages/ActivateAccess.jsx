@@ -117,8 +117,8 @@ export default function ActivateAccess() {
                 ))}
                 <Button className="w-full" variant="outline" onClick={restore} disabled={isChecking || purchasingPlan !== null}>Restaurar compras</Button>
               </> : <>
-                <div className="flex items-center justify-between gap-3"><span className="text-sm">Plano mensal</span><Button onClick={() => buyKiwifyPlan('monthly')}>Quero este plano</Button></div>
-                <div className="flex items-center justify-between gap-3"><span className="text-sm">Plano anual</span><Button onClick={() => buyKiwifyPlan('annual')}>Quero este plano</Button></div>
+                <div className="flex items-center justify-between gap-3"><span className="text-sm">Plano mensal</span><Button className="bg-[#094C7E] text-white hover:bg-[#073B60]" onClick={() => buyKiwifyPlan('monthly')}>Quero este plano</Button></div>
+                <div className="flex items-center justify-between gap-3"><span className="text-sm">Plano anual</span><Button className="bg-[#094C7E] text-white hover:bg-[#073B60]" onClick={() => buyKiwifyPlan('annual')}>Quero este plano</Button></div>
               </>}
             </div>
           )}

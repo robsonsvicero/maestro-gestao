@@ -27,6 +27,7 @@ export default function Settings() {
   const [billingAvailable, setBillingAvailable] = useState(false);
   const [billingMessage, setBillingMessage] = useState('');
   const [purchasingPlan, setPurchasingPlan] = useState(null);
+  const [isKiwifyCancelDialogOpen, setIsKiwifyCancelDialogOpen] = useState(false);
 
   const { data: settings = [], isLoading: _isLoading } = useQuery({
     queryKey: ['appSettings'],
@@ -124,7 +125,7 @@ export default function Settings() {
   };
 
   const cancelKiwifySubscription = () => {
-    setBillingMessage('Para cancelar sua assinatura, abra o e-mail da Kiwify com o assunto “Pagamento de assinatura aprovado” e clique em “Gerenciar assinatura”. Por segurança, o cancelamento é concluído diretamente pela Kiwify.');
+    setIsKiwifyCancelDialogOpen(true);
   };
 
   const currentPlanLabel = accessType === 'trial'
@@ -420,7 +421,7 @@ export default function Settings() {
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{option.id === 'annual' ? 'Melhor custo-benefício' : 'Cobrança recorrente'}</p>
                     <h3 className="mt-2 text-lg font-bold">{option.name}</h3>
                     <p className="mt-3 text-2xl font-bold">{option.price} <span className="text-sm font-normal text-slate-500">{option.period}</span></p>
-                    <Button type="button" className="mt-4 w-full" disabled={isUnavailable} onClick={() => usesKiwifyCheckout ? buyKiwifyPlan(option.id) : buySubscriptionPlan(availablePlan)}>
+                    <Button type="button" className="mt-4 w-full bg-[#094C7E] text-white hover:bg-[#073B60]" disabled={isUnavailable} onClick={() => usesKiwifyCheckout ? buyKiwifyPlan(option.id) : buySubscriptionPlan(availablePlan)}>
                       {purchasingPlan === option.id ? 'Abrindo...' : 'Quero este plano'}
                     </Button>
                   </div>
@@ -553,6 +554,23 @@ export default function Settings() {
           </Button>
         </div>
       </div>
+      {isKiwifyCancelDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="kiwify-cancel-title">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+            <h2 id="kiwify-cancel-title" className="text-xl font-bold">Cancelar assinatura</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Para cancelar sua assinatura, abra o e-mail da Kiwify com o assunto “Pagamento de assinatura aprovado” e clique em “Gerenciar assinatura”. Por segurança, o cancelamento é concluído diretamente pela Kiwify.
+            </p>
+            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Se tiver dificuldade para acessar a Kiwify, entre em contato pelo e-mail{' '}
+              <a className="font-medium text-[#094C7E] hover:underline" href="mailto:suporte@app-maeztro.gestfors.com.br">suporte@app-maeztro.gestfors.com.br</a>.
+            </p>
+            <div className="mt-6 flex justify-end">
+              <Button type="button" className="bg-[#094C7E] text-white hover:bg-[#073B60]" onClick={() => setIsKiwifyCancelDialogOpen(false)}>Entendi</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
