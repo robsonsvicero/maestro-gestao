@@ -24,7 +24,6 @@ Deno.serve(async (request: Request) => {
   });
   const { data: { user }, error: userError } = await userClient.auth.getUser(token);
   if (userError || !user?.email) return reply(401, { error: 'Invalid session' });
-  if (!user.email_confirmed_at) return reply(403, { error: 'Confirme seu e-mail antes de iniciar o teste.' });
 
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const email = user.email.trim().toLowerCase();
