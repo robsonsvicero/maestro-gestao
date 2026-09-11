@@ -1,14 +1,26 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const headers = {
-  'content-type': 'application/json; charset=utf-8',
-  'access-control-allow-origin': '*',
-  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
-  'access-control-allow-methods': 'POST, OPTIONS',
-};
-const reply = (status: number, body: Record<string, unknown>) => {
+const ALLOWED_ORIGINS = [
+  Deno.env.get('APP_URL')?.replace(/\/$/, ''),
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://maeztro.app',
+].filter(Boolean) as string[];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('origin') || '';
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : (ALLOWED_ORIGINS[0] || '*');
+  return {
+    'content-type': 'application/json; charset=utf-8',
+    'access-control-allow-origin': allowOrigin,
+    'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+    'access-control-allow-methods': 'POST, OPTIONS',
+  };
+}
+
+const reply = (req: Request, status: number, body: Record<string, unknown>) => {
   if (status >= 400) console.error(JSON.stringify({ status, ...body }));
-  return new Response(JSON.stringify(body), { status, headers });
+  return new Response(JSON.stringify(body), { status, headers: getCorsHeaders(req) });
 };
 
 Deno.serve(async (request) => {
