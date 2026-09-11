@@ -155,7 +155,7 @@ function mapGoogleState(sub: Record<string, unknown>): {
 
 // ─── Main handler ───────────────────────────────────────────────────────────
 
-Deno.serve(async (request) => {
+Deno.serve(async (request: Request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers });
   if (request.method !== 'POST') return reply(405, { error: 'Method not allowed' });
 

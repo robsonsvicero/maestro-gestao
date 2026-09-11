@@ -9,7 +9,7 @@ const headers = {
 const reply = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), { status, headers });
 
-Deno.serve(async (request) => {
+Deno.serve(async (request: Request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers });
   if (request.method !== 'POST') return reply(405, { error: 'Method not allowed' });
 
@@ -57,16 +57,16 @@ Deno.serve(async (request) => {
   
   if (profileError) return reply(500, { error: 'Could not initialize user profile' });
 
-  const activeEntitlements = (entitlement ?? []).filter((item) =>
+  const activeEntitlements = (entitlement ?? []).filter((item: any) =>
     ['active', 'grace_period', 'canceled'].includes(item.status)
     && (!item.access_ends_at || new Date(item.access_ends_at).getTime() > Date.now())
   );
 
   if (activeEntitlements.length > 0) {
     // Prioridade de acesso: lifetime > subscription > trial
-    let bestEntitlement = activeEntitlements.find(e => e.access_type === 'lifetime');
-    if (!bestEntitlement) bestEntitlement = activeEntitlements.find(e => e.access_type === 'subscription');
-    if (!bestEntitlement) bestEntitlement = activeEntitlements.find(e => e.access_type === 'trial');
+    let bestEntitlement = activeEntitlements.find((e: any) => e.access_type === 'lifetime');
+    if (!bestEntitlement) bestEntitlement = activeEntitlements.find((e: any) => e.access_type === 'subscription');
+    if (!bestEntitlement) bestEntitlement = activeEntitlements.find((e: any) => e.access_type === 'trial');
     
     if (bestEntitlement) {
       if (bestEntitlement.access_type === 'trial') {

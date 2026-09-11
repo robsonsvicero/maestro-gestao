@@ -133,7 +133,7 @@ function mapGoogleState(sub: Record<string, unknown>): {
 // }
 // The decoded "data" field contains a SubscriptionNotification or similar.
 
-Deno.serve(async (request) => {
+Deno.serve(async (request: Request) => {
   if (request.method !== 'POST') return reply(405, { error: 'Method not allowed' });
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');

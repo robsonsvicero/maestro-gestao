@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
@@ -12,8 +12,10 @@ export default function FreeTrial() {
   const { isAuthenticated, refreshAccess } = useAuth();
   const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false); const [message, setMessage] = useState(''); const [error, setError] = useState('');
+  const hasActivatedRef = useRef(false);
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || hasActivatedRef.current) return;
+    hasActivatedRef.current = true;
     let mounted = true;
     const activateTrial = async () => {
       setIsSubmitting(true);

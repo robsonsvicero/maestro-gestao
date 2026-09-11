@@ -23,9 +23,9 @@ const reply = (req: Request, status: number, body: Record<string, unknown>) => {
   return new Response(JSON.stringify(body), { status, headers: getCorsHeaders(req) });
 };
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers });
-  if (request.method !== 'POST') return reply(405, { error: 'Method not allowed' });
+Deno.serve(async (request: Request) => {
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(request) });
+  if (request.method !== 'POST') return reply(request, 405, { error: 'Method not allowed' });
 
   const authorization = request.headers.get('authorization');
   const token = authorization?.replace(/^Bearer\s+/i, '');
@@ -33,7 +33,7 @@ Deno.serve(async (request) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const appUrl = Deno.env.get('APP_URL')?.replace(/\/$/, '') ?? '';
 
-  if (!token || !supabaseUrl || !serviceRoleKey) return reply(401, { error: 'Unauthorized' });
+  if (!token || !supabaseUrl || !serviceRoleKey) return reply(request, 401, { error: 'Unauthorized' });
 
   // Valida que quem está chamando é um admin
   const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
@@ -42,7 +42,7 @@ Deno.serve(async (request) => {
   });
 
   const { data: { user }, error: userError } = await userClient.auth.getUser(token);
-  if (userError || !user) return reply(401, { error: 'Invalid session' });
+  if (userError || !user) return reply(request, 401, { error: 'Invalid session' });
 
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 
@@ -52,18 +52,18 @@ Deno.serve(async (request) => {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (callerProfileError) return reply(500, { error: 'Não foi possível verificar as permissões.' });
-  if (callerProfile?.role !== 'admin') return reply(403, { error: 'Acesso restrito: apenas administradores.' });
+  if (callerProfileError) return reply(request, 500, { error: 'Não foi possível verificar as permissões.' });
+  if (callerProfile?.role !== 'admin') return reply(request, 403, { error: 'Acesso restrito: apenas administradores.' });
 
   let body: { email?: string; name?: string };
   try {
     body = await request.json();
   } catch {
-    return reply(400, { error: 'Corpo da requisição inválido.' });
+    return reply(request, 400, { error: 'Corpo da requisição inválido.' });
   }
 
   const emailToGrant = body.email?.trim()?.toLowerCase();
-  if (!emailToGrant) return reply(400, { error: 'E-mail é obrigatório.' });
+  if (!emailToGrant) return reply(request, 400, { error: 'E-mail é obrigatório.' });
 
   // ── Passo 1: localizar ou criar a conta no Auth ──────────────────────────
 
@@ -82,7 +82,7 @@ Deno.serve(async (request) => {
   } else {
     // Busca direto em auth.users (criou conta mas ainda não fez 1º login)
     const { data: authList } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    const found = authList?.users?.find((u) => u.email?.toLowerCase() === emailToGrant);
+    const found = authList?.users?.find((u: any) => u.email?.toLowerCase() === emailToGrant);
 
     if (found) {
       targetUserId = found.id;
@@ -95,7 +95,7 @@ Deno.serve(async (request) => {
 
       if (inviteError) {
         console.error('Erro ao criar conta:', inviteError);
-        return reply(500, { error: `Não foi possível criar a conta para "${emailToGrant}". Verifique se o e-mail é válido.` });
+        return reply(request, 500, { error: `Não foi possível criar a conta para "${emailToGrant}". Verifique se o e-mail é válido.` });
       }
 
       targetUserId = invited.user?.id ?? null;
@@ -104,7 +104,7 @@ Deno.serve(async (request) => {
   }
 
   if (!targetUserId) {
-    return reply(500, { error: 'Não foi possível identificar o usuário. Tente novamente.' });
+    return reply(request, 500, { error: 'Não foi possível identificar o usuário. Tente novamente.' });
   }
 
   // ── Passo 2: verificar se já existe licença vitalícia ativa ──────────────
@@ -118,7 +118,7 @@ Deno.serve(async (request) => {
     .maybeSingle();
 
   if (existing && existing.status === 'active') {
-    return reply(409, { error: `Este e-mail já possui uma licença vitalícia ativa.` });
+    return reply(request, 409, { error: `Este e-mail já possui uma licença vitalícia ativa.` });
   }
 
   // ── Passo 3: criar o entitlement ─────────────────────────────────────────
@@ -135,12 +135,12 @@ Deno.serve(async (request) => {
 
   if (insertError) {
     console.error('Erro ao inserir entitlement:', insertError);
-    return reply(500, { error: 'Não foi possível criar a licença. Tente novamente.' });
+    return reply(request, 500, { error: 'Não foi possível criar a licença. Tente novamente.' });
   }
 
   const message = accountCreated
     ? `Licença criada e e-mail de convite enviado para "${emailToGrant}". O usuário receberá um link para definir a senha.`
     : `Licença vitalícia criada com sucesso para "${emailToGrant}".`;
 
-  return reply(200, { status: 'success', message, account_created: accountCreated });
+  return reply(request, 200, { status: 'success', message, account_created: accountCreated });
 });
