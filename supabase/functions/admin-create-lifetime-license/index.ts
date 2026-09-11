@@ -108,18 +108,17 @@ Deno.serve(async (request: Request) => {
     return reply(request, 500, { error: 'Não foi possível identificar o usuário. Tente novamente.' });
   }
 
-  // ── Passo 2: verificar se já existe licença vitalícia ativa ──────────────
+  // ── Passo 2: verificar se o e-mail já possui uma licença ────────────────
 
   const { data: existing } = await admin
     .from('entitlements')
     .select('id, status')
     .eq('auth_user_id', targetUserId)
-    .eq('access_type', 'lifetime')
-    .is('revoked_at', null)
+    .limit(1)
     .maybeSingle();
 
-  if (existing && existing.status === 'active') {
-    return reply(request, 409, { error: `Este e-mail já possui uma licença vitalícia ativa.` });
+  if (existing) {
+    return reply(request, 409, { error: `Este e-mail já possui uma licença (${existing.status}).` });
   }
 
   // ── Passo 3: criar o entitlement ─────────────────────────────────────────
