@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Settings as SettingsIcon, Image, Upload, Lock, CalendarCheck, CreditCard, XCircle } from "lucide-react";
+import { Settings as SettingsIcon, Image, Upload, Lock, CalendarCheck, CreditCard, XCircle, Eye, EyeOff } from "lucide-react";
 import { formatPhone, unformatPhone } from "@/utils/formatUtils";
 
 const KIWIFY_CHECKOUTS = {
@@ -48,6 +48,8 @@ export default function Settings() {
     password: "",
     confirmPassword: "",
   });
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [passwordFeedback, setPasswordFeedback] = useState({
     type: "",
@@ -490,24 +492,50 @@ export default function Settings() {
             <form onSubmit={handlePasswordUpdate} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="new_password">Nova senha</Label>
-                <Input
-                  id="new_password"
-                  type="password"
-                  value={passwordForm.password}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
-                  placeholder="Digite a nova senha"
-                />
+                <div className="relative">
+                  <Input
+                    id="new_password"
+                    type={showNewPassword ? "text" : "password"}
+                    value={passwordForm.password}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
+                    placeholder="Digite a nova senha"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowNewPassword((current) => !current)}
+                    aria-label={showNewPassword ? "Ocultar senha" : "Mostrar senha"}
+                  >
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirm_password">Confirmar nova senha</Label>
-                <Input
-                  id="confirm_password"
-                  type="password"
-                  value={passwordForm.confirmPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                  placeholder="Confirme a nova senha"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirm_password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    placeholder="Confirme a nova senha"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowConfirmPassword((current) => !current)}
+                    aria-label={showConfirmPassword ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
 
               {passwordFeedback.message && (
