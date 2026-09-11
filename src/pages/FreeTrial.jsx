@@ -13,7 +13,7 @@ export default function FreeTrial() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [error, setError] = useState('');
   const hasActivatedRef = useRef(false);
 
@@ -32,10 +32,9 @@ export default function FreeTrial() {
       }
       const status = await refreshAccess();
       if (mounted && status === 'active') {
-        navigate('/', { replace: true });
-      } else if (mounted) {
-        setIsSubmitting(false);
+        setShowSuccessModal(true);
       }
+      if (mounted) setIsSubmitting(false);
     };
     activateTrial();
     return () => { mounted = false; };
@@ -44,7 +43,6 @@ export default function FreeTrial() {
   const submit = async (event) => {
     event.preventDefault();
     setError('');
-    setMessage('');
     setIsSubmitting(true);
 
     const { data, error: signUpError } = await supabase.auth.signUp({
@@ -60,26 +58,27 @@ export default function FreeTrial() {
     }
 
     if (data?.session) {
-      // Se a sessão foi criada na hora, executa a ativação do teste imediatamente
       const { data: trialData, error: trialError } = await supabase.functions.invoke('start-trial');
       if (trialError || trialData?.error) {
         setError(trialData?.error || trialError?.message || 'Não foi possível iniciar seu teste.');
         setIsSubmitting(false);
         return;
       }
-      const status = await refreshAccess();
-      if (status === 'active') {
-        navigate('/', { replace: true });
-      } else {
-        setIsSubmitting(false);
-      }
+      await refreshAccess();
+      setShowSuccessModal(true);
+      setIsSubmitting(false);
     } else {
-      setMessage('Conta criada. Caso a confirmação de e-mail esteja ativa no sistema, verifique sua caixa de entrada.');
+      setShowSuccessModal(true);
       setIsSubmitting(false);
     }
   };
 
-  if (isAuthenticated && isSubmitting) {
+  const handleGoToApp = async () => {
+    await supabase.auth.signOut().catch(() => {});
+    navigate('/login', { replace: true });
+  };
+
+  if (isAuthenticated && isSubmitting && !showSuccessModal) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 dark:bg-slate-950">
         <div className="text-center space-y-3">
@@ -91,7 +90,7 @@ export default function FreeTrial() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12 dark:bg-slate-950">
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12 dark:bg-slate-950 relative">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-2">
           <CardTitle className="text-2xl">Teste grátis por 14 dias</CardTitle>
@@ -121,7 +120,6 @@ export default function FreeTrial() {
               />
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
-            {message && <p className="text-sm text-emerald-700">{message}</p>}
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Aguarde...' : 'Começar teste grátis'}
             </Button>
@@ -135,6 +133,37 @@ export default function FreeTrial() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Modal / Popover de Confirmação */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <Card className="w-full max-w-md shadow-2xl border-emerald-500/20 bg-white dark:bg-slate-900">
+            <CardHeader className="text-center space-y-3 pb-4">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
+                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <CardTitle className="text-2xl text-emerald-700 dark:text-emerald-400">Cadastro realizado com sucesso!</CardTitle>
+              <CardDescription className="text-base text-slate-600 dark:text-slate-300">
+                Seus <strong>14 dias de teste gratuito</strong> foram ativados com sucesso no Maestro Gestão.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-0">
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-800/60 p-4 border text-sm text-slate-600 dark:text-slate-300 space-y-1">
+                <p><strong>E-mail cadastrado:</strong> {email}</p>
+                <p className="text-xs text-slate-500">Clique no botão abaixo para fazer login e começar a usar o aplicativo.</p>
+              </div>
+              <Button
+                className="w-full bg-[#094C7E] hover:bg-[#07395f] text-white py-6 text-base font-semibold shadow-md"
+                onClick={handleGoToApp}
+              >
+                Ir para o App (Fazer Login)
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
