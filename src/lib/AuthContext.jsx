@@ -80,7 +80,13 @@ export function AuthProvider({ children }) {
         if (!isMounted) return;
 
         if (error && error.status !== 401 && error.name !== 'AuthSessionMissingError') {
-          setAuthError({ type: 'auth_required', message: error.message });
+          if (error.status === 400 || error.message?.includes('refresh_token')) {
+            await supabase.auth.signOut().catch(() => {});
+            setSession(null);
+            setAccessStatus('idle');
+          } else {
+            setAuthError({ type: 'auth_required', message: error.message });
+          }
         }
 
         sessionUserId.current = currentSession?.user?.id ?? null;
@@ -88,6 +94,9 @@ export function AuthProvider({ children }) {
         if (currentSession) await refreshAccess(currentSession);
       } catch (error) {
         if (isMounted) {
+          await supabase.auth.signOut().catch(() => {});
+          setSession(null);
+          setAccessStatus('idle');
           setAuthError({ type: 'auth_required', message: error.message || 'Sessão inválida' });
         }
       } finally {
