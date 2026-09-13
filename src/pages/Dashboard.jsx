@@ -90,7 +90,7 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <StatCard
           title="Receita do Mês"
           value={`R$ ${monthTotals.income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}

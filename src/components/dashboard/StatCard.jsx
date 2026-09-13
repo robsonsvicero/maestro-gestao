@@ -4,11 +4,12 @@ import { motion } from "framer-motion";
 export default function StatCard({ title, value, icon: Icon, iconColor, bgGradient, trend, theme }) {
   return (
     <motion.div
+      className="h-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className={`border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative ${
+      <Card className={`h-full border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative ${
         theme === 'dark' 
           ? 'bg-slate-800/80' 
           : `bg-gradient-to-br ${bgGradient}`
