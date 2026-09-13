@@ -21,7 +21,9 @@ export default function StudentForm({ student, onSubmit, onCancel, theme, isSubm
     level: "iniciante",
     lesson_day: "",
     lesson_time: "",
+    payment_type: "monthly",
     monthly_payment: "",
+    weekly_payment: "",
     payment_day: "",
     payment_status: "pending",
     student_status: "active",
@@ -33,12 +35,12 @@ export default function StudentForm({ student, onSubmit, onCancel, theme, isSubm
   const [calculatedPaymentStatus, setCalculatedPaymentStatus] = useState(formData.payment_status || 'pending');
 
   useEffect(() => {
-    if (!formData.payment_day) {
+    if (formData.payment_type === 'weekly' || !formData.payment_day) {
       return;
     }
 
     const nextDate = getNextPaymentDate(
-      formData.payment_day,
+      formData.payment_type === 'weekly' ? undefined : formData.payment_day,
       formData.payment_status || 'pending',
       Array.isArray(formData.payment_history) ? formData.payment_history : [],
     );
@@ -63,20 +65,22 @@ export default function StudentForm({ student, onSubmit, onCancel, theme, isSubm
   const handleSubmit = (e) => {
     e.preventDefault();
     const nextPaymentDate = getNextPaymentDate(
-      formData.payment_day,
+      formData.payment_type === 'weekly' ? undefined : formData.payment_day,
       calculatedPaymentStatus || 'pending',
       Array.isArray(formData.payment_history) ? formData.payment_history : [],
     );
 
     onSubmit({
       ...formData,
+      payment_type: formData.payment_type || 'monthly',
       payment_status: calculatedPaymentStatus || 'pending',
       next_payment_date: nextPaymentDate || null,
       last_payment_date: formData.last_payment_date || null,
       birthday_day: formData.birthday_day ? parseInt(formData.birthday_day) : undefined,
       birthday_month: formData.birthday_month ? parseInt(formData.birthday_month) : undefined,
-      monthly_payment: formData.monthly_payment ? Number(formData.monthly_payment) : 0,
-      payment_day: formData.payment_day ? Number(formData.payment_day) : undefined,
+      monthly_payment: formData.payment_type === 'weekly' ? 0 : (formData.monthly_payment ? Number(formData.monthly_payment) : 0),
+      weekly_payment: formData.payment_type === 'weekly' ? (formData.weekly_payment ? Number(formData.weekly_payment) : 0) : 0,
+      payment_day: formData.payment_type === 'weekly' ? undefined : (formData.payment_day ? Number(formData.payment_day) : undefined),
     });
   };
 
@@ -234,20 +238,41 @@ export default function StudentForm({ student, onSubmit, onCancel, theme, isSubm
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="monthly_payment" className={labelClass}>Mensalidade (R$)</Label>
+          <Label htmlFor="payment_type" className={labelClass}>Forma de cobrança</Label>
+          <Select
+            value={formData.payment_type || 'monthly'}
+            onValueChange={(value) => setFormData({ ...formData, payment_type: value })}
+          >
+            <SelectTrigger id="payment_type" className={inputClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="monthly">Mensalidade</SelectItem>
+              <SelectItem value="weekly">Por aula / semanal</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor={formData.payment_type === 'weekly' ? 'weekly_payment' : 'monthly_payment'} className={labelClass}>
+            {formData.payment_type === 'weekly' ? 'Valor por aula (R$)' : 'Mensalidade (R$)'}
+          </Label>
           <Input
-            id="monthly_payment"
+            id={formData.payment_type === 'weekly' ? 'weekly_payment' : 'monthly_payment'}
             type="number"
             min="0"
             step="0.01"
-            value={formData.monthly_payment || ''}
-            onChange={(e) => setFormData({ ...formData, monthly_payment: e.target.value })}
+            value={formData.payment_type === 'weekly' ? formData.weekly_payment || '' : formData.monthly_payment || ''}
+            onChange={(e) => setFormData({
+              ...formData,
+              [formData.payment_type === 'weekly' ? 'weekly_payment' : 'monthly_payment']: e.target.value,
+            })}
             placeholder="0,00"
             className={inputClass}
           />
         </div>
 
-        <div className="space-y-2">
+        {formData.payment_type !== 'weekly' && <div className="space-y-2">
           <Label htmlFor="payment_day" className={labelClass}>Dia de vencimento</Label>
           <Input
             id="payment_day"
@@ -259,7 +284,7 @@ export default function StudentForm({ student, onSubmit, onCancel, theme, isSubm
             placeholder="Ex: 5"
             className={inputClass}
           />
-        </div>
+        </div>}
 
         <div className="space-y-2">
           <Label htmlFor="payment_status" className={labelClass}>Status do pagamento</Label>

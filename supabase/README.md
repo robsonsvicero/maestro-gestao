@@ -30,6 +30,13 @@ Depois de executar `user_data_rls.sql`, execute novamente
 `maintain_future_lessons.sql`. A versão atual preserva o `user_id` do professor
 ao criar aulas mensais pela rotina do banco.
 
+## Modalidade de cobrança dos alunos
+
+Execute `student_payment_modes.sql` para adicionar a escolha entre mensalidade
+e cobrança por aula/semanal. Alunos existentes continuam usando mensalidade;
+novos alunos semanais usam o valor por aula e têm os pagamentos registrados por
+semana, com transação e recibo.
+
 ## Fase 2 — Kiwify
 
 Execute `google_play_billing_schema.sql` e, se ele já tiver sido executado,

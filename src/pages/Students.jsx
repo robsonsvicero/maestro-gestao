@@ -14,6 +14,7 @@ import { getLocalDateString } from "@/utils/dateUtils";
 import StudentForm from "../components/students/StudentForm";
 import StudentCard from "../components/students/StudentCard";
 import StudentMonthlyFeesView from "../components/students/StudentMonthlyFeesView";
+import StudentWeeklyFeesView from "../components/students/StudentWeeklyFeesView";
 import ReceiptPreview from "../components/receipts/ReceiptPreview";
 import RescheduleModal from "../components/students/RescheduleModal";
 
@@ -279,6 +280,67 @@ export default function Students() {
     }
   };
 
+  const createWeeklyReceiptForStudent = async (student, week, paymentDate = getLocalDateString(), paymentMethod = 'pix') => {
+    return base44.entities.Receipt.create({
+      receipt_number: `REC-${Date.now()}`,
+      student_id: student.id,
+      student_name: student.full_name,
+      amount: Number(student.weekly_payment || 0),
+      description: `Aulas da semana de ${new Date(`${week.weekStart}T00:00:00`).toLocaleDateString('pt-BR')}`,
+      payment_date: paymentDate,
+      payment_method: paymentMethod,
+      status: 'paid',
+    });
+  };
+
+  const handleRegisterWeeklyPayment = async (student, week, paymentInfo = {}) => {
+    const today = getLocalDateString();
+    const paymentHistory = Array.isArray(student.payment_history) ? [...student.payment_history] : [];
+    const paymentEntry = {
+      period: 'week',
+      week_start: week.weekStart,
+      week_end: week.weekEnd,
+      status: 'paid',
+      paid_at: today,
+      amount: Number(student.weekly_payment || 0),
+      payment_method: paymentInfo.paymentMethod || 'pix',
+    };
+    const existingIndex = paymentHistory.findIndex((entry) => entry.week_start === week.weekStart);
+    if (existingIndex >= 0) paymentHistory[existingIndex] = paymentEntry;
+    else paymentHistory.push(paymentEntry);
+
+    await base44.entities.Transaction.create({
+      type: 'income',
+      category: 'lesson_payment',
+      amount: Number(student.weekly_payment || 0),
+      description: `Aulas da semana de ${new Date(`${week.weekStart}T00:00:00`).toLocaleDateString('pt-BR')}`,
+      date: today,
+      payment_method: paymentInfo.paymentMethod || 'pix',
+      student_name: student.full_name,
+      student_id: student.id,
+    });
+
+    const updatedStudent = await base44.entities.Student.update(student.id, {
+      payment_history: paymentHistory,
+      payment_status: 'paid',
+      last_payment_date: today,
+    });
+    queryClient.invalidateQueries({ queryKey: ['students'] });
+    setSelectedStudentForFees(updatedStudent);
+
+    if (paymentInfo.generateReceipt) {
+      const receipt = await createWeeklyReceiptForStudent(updatedStudent, week, today, paymentInfo.paymentMethod);
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
+      setPreviewReceipt(receipt);
+    }
+  };
+
+  const handleGenerateWeeklyReceipt = async (student, week, paymentMethod = 'pix') => {
+    const receipt = await createWeeklyReceiptForStudent(student, week, getLocalDateString(), paymentMethod);
+    queryClient.invalidateQueries({ queryKey: ['receipts'] });
+    setPreviewReceipt(receipt);
+  };
+
   const handleDeletePayment = async (student, monthNumber) => {
     const year = new Date().getFullYear();
     const paymentHistory = Array.isArray(student.payment_history) ? [...student.payment_history] : [];
@@ -350,16 +412,22 @@ export default function Students() {
   if (selectedStudentForFees) {
     return (
       <div className="relative">
-        <StudentMonthlyFeesView
-          student={selectedStudentForFees}
-          onBack={() => {
-            setSelectedStudentForFees(null);
-            setPreviewReceipt(null);
-          }}
-          onPay={(monthNumber, paymentInfo) => handlePayMonth(selectedStudentForFees, monthNumber, paymentInfo)}
-          onDeletePayment={(monthNumber) => handleDeletePayment(selectedStudentForFees, monthNumber)}
-          onGenerateReceipt={(monthNumber) => handleGenerateReceipt(selectedStudentForFees, monthNumber)}
-        />
+        {selectedStudentForFees.payment_type === 'weekly' ? (
+          <StudentWeeklyFeesView
+            student={selectedStudentForFees}
+            onBack={() => { setSelectedStudentForFees(null); setPreviewReceipt(null); }}
+            onPay={(week, paymentInfo) => handleRegisterWeeklyPayment(selectedStudentForFees, week, paymentInfo)}
+            onGenerateReceipt={(week) => handleGenerateWeeklyReceipt(selectedStudentForFees, week)}
+          />
+        ) : (
+          <StudentMonthlyFeesView
+            student={selectedStudentForFees}
+            onBack={() => { setSelectedStudentForFees(null); setPreviewReceipt(null); }}
+            onPay={(monthNumber, paymentInfo) => handlePayMonth(selectedStudentForFees, monthNumber, paymentInfo)}
+            onDeletePayment={(monthNumber) => handleDeletePayment(selectedStudentForFees, monthNumber)}
+            onGenerateReceipt={(monthNumber) => handleGenerateReceipt(selectedStudentForFees, monthNumber)}
+          />
+        )}
 
         {previewReceipt && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">

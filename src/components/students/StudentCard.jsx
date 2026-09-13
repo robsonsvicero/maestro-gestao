@@ -53,10 +53,12 @@ export default function StudentCard({
       </div>
 
       <div className="space-y-3 p-4 text-sm text-slate-600 dark:text-slate-300">
-        {student.monthly_payment && (
+        {(student.monthly_payment || student.weekly_payment) && (
           <div className="flex items-center gap-2">
-            <span className="text-[#094C7E] font-semibold">Mensalidade:</span>
-            <span>R$ {Number(student.monthly_payment).toFixed(2)}</span>
+            <span className="text-[#094C7E] font-semibold">
+              {student.payment_type === 'weekly' ? 'Por aula:' : 'Mensalidade:'}
+            </span>
+            <span>R$ {Number(student.payment_type === 'weekly' ? student.weekly_payment : student.monthly_payment).toFixed(2)}</span>
           </div>
         )}
 
@@ -123,7 +125,7 @@ export default function StudentCard({
       <div className="grid grid-cols-2 gap-2 border-t border-slate-200 p-4 dark:border-slate-700">
         <Button variant="outline" size="sm" onClick={onOpenMonthlyFees} className="col-span-2 w-full min-w-0 px-2">
           <CheckCircle className="mr-1.5 h-4 w-4 shrink-0" />
-          Mensalidades
+          {student.payment_type === 'weekly' ? 'Pagamentos semanais' : 'Mensalidades'}
         </Button>
 
         {onReschedule && (

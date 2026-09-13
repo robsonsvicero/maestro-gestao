@@ -183,6 +183,11 @@ export default function ReceiptPreview({ receipt, companySettings, onClose, them
             }`}>
               {companySettings?.professional_name || "Profissional"}
             </h1>
+            {companySettings?.cpf_cnpj && (
+              <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                CPF/CNPJ: {companySettings.cpf_cnpj}
+              </p>
+            )}
             <p className={`text-lg ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
               RECIBO DE PAGAMENTO
             </p>
