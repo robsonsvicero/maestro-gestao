@@ -129,7 +129,7 @@ export default function Dashboard() {
         <MonthlyChart transactions={monthTransactions} />
       </div>
 
-      <RecentTransactions transactions={transactions.slice(0, 10)} isLoading={isLoading} />
+      <RecentTransactions transactions={transactions.slice(0, 5)} isLoading={isLoading} />
     </div>
   );
 }

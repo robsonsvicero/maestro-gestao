@@ -6,12 +6,17 @@ import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const categoryLabels = {
+  general: "Geral",
+  monthly_payment: "Mensalidade",
+  lesson: "Aula",
+  supplies: "Materiais",
+  rent: "Aluguel",
+  salary: "Salário",
+  taxes: "Impostos",
   lesson_payment: "Pagamento de Aula",
   instrument_rental: "Aluguel de Instrumento",
   sheet_music: "Partituras",
-  supplies: "Material",
   software: "Software",
-  marketing: "Marketing",
   utilities: "Utilidades",
   transportation: "Transporte",
   training: "Treinamento",
@@ -88,7 +93,7 @@ export default function RecentTransactions({ transactions, isLoading, theme }) {
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="outline" className="text-xs">
-                        {categoryLabels[transaction.category]}
+                        {categoryLabels[transaction.category] || transaction.category || "Sem categoria"}
                       </Badge>
                       <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
                         {format(new Date(transaction.date), "d 'de' MMMM", { locale: ptBR })}
