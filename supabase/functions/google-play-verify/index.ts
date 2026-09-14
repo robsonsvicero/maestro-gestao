@@ -1,5 +1,42 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+async function notifyRegistration(type: 'trial' | 'subscription', email: string, provider: string, extra?: string) {
+  const destination = (Deno.env.get('ADMIN_NOTIFICATION_EMAIL') ?? Deno.env.get('NOTIFY_EMAIL') ?? Deno.env.get('ADMIN_EMAIL') ?? '').trim();
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')?.replace(/\/$/, '');
+  if (!destination || !supabaseUrl) return;
+
+  const subject = type === 'trial'
+    ? 'Novo cadastro de teste gratuito'
+    : 'Novo cadastro de plano comercializado';
+
+  const body = [
+    'Novo cadastro identificado no Maestro Gestão.',
+    '',
+    `Tipo: ${type === 'trial' ? 'Teste gratuito' : 'Plano comercializado'}`,
+    `E-mail: ${email}`,
+    `Provider: ${provider}`,
+    extra ? `Detalhes: ${extra}` : '',
+    '',
+    'Atenciosamente,',
+    'Maestro Gestão',
+  ].filter(Boolean).join('\n');
+
+  try {
+    await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        from_name: 'Maestro Gestão',
+        to: destination,
+        subject,
+        body,
+      }),
+    });
+  } catch (err) {
+    console.warn('Não foi possível enviar o e-mail de notificação de cadastro:', err);
+  }
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const PACKAGE_NAME = 'com.maeztrogestao.app';
@@ -254,6 +291,8 @@ Deno.serve(async (request: Request) => {
       });
 
     if (insertError) return reply(500, { error: 'Could not create entitlement' });
+
+    await notifyRegistration('subscription', email ?? user.email ?? '', 'google_play', `Produto ${productId} | token ${purchaseToken}`);
   }
 
   // 7. Log event

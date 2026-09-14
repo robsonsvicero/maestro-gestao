@@ -1,5 +1,42 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+async function notifyRegistration(type: 'trial' | 'subscription', email: string, provider: string, extra?: string) {
+  const destination = (Deno.env.get('ADMIN_NOTIFICATION_EMAIL') ?? Deno.env.get('NOTIFY_EMAIL') ?? Deno.env.get('ADMIN_EMAIL') ?? '').trim();
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')?.replace(/\/$/, '');
+  if (!destination || !supabaseUrl) return;
+
+  const subject = type === 'trial'
+    ? 'Novo cadastro de teste gratuito'
+    : 'Novo cadastro de plano comercializado';
+
+  const body = [
+    'Novo cadastro identificado no Maestro Gestão.',
+    '',
+    `Tipo: ${type === 'trial' ? 'Teste gratuito' : 'Plano comercializado'}`,
+    `E-mail: ${email}`,
+    `Provider: ${provider}`,
+    extra ? `Detalhes: ${extra}` : '',
+    '',
+    'Atenciosamente,',
+    'Maestro Gestão',
+  ].filter(Boolean).join('\n');
+
+  try {
+    await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        from_name: 'Maestro Gestão',
+        to: destination,
+        subject,
+        body,
+      }),
+    });
+  } catch (err) {
+    console.warn('Não foi possível enviar o e-mail de notificação de cadastro:', err);
+  }
+}
+
 const headers = { 'content-type': 'application/json; charset=utf-8' };
 const reply = (status: number, body: Record<string, unknown>) => new Response(JSON.stringify(body), { status, headers });
 
@@ -149,6 +186,10 @@ Deno.serve(async (request) => {
     ? await admin.from('entitlements').update(entitlement).eq('id', existingEntitlement.id)
     : await admin.from('entitlements').insert(entitlement);
   if (entitlementError) return fail(`Could not update entitlement: ${entitlementError.message}`);
+
+  if (!existingEntitlement && kind === 'approved') {
+    await notifyRegistration('subscription', email, 'kiwify', `Produto ${productId} | referência ${reference}`);
+  }
 
   await admin.from('subscription_events').update({ auth_user_id: authUserId, processing_status: 'processed', processing_error: null, processed_at: now }).eq('id', event.id);
   return reply(200, { received: true });
