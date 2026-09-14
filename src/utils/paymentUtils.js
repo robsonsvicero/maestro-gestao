@@ -1,5 +1,31 @@
 import { getLocalDateString, parseLocalDate } from './dateUtils';
 
+export const getWeekStartKey = (value) => {
+  const date = value instanceof Date ? value : parseLocalDate(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  const weekday = normalized.getDay();
+  const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
+  normalized.setDate(normalized.getDate() + mondayOffset);
+
+  return getLocalDateString(normalized);
+};
+
+export const getLessonPaymentStatus = (student, lesson) => {
+  if (!student) return 'pending';
+
+  if (student.payment_type === 'weekly') {
+    const weekStart = getWeekStartKey(lesson?.date || lesson?.lesson_date);
+    const history = Array.isArray(student.payment_history) ? student.payment_history : [];
+    const paidWeek = history.some((entry) => entry?.period === 'week' && entry?.week_start === weekStart && entry?.status === 'paid');
+    return paidWeek ? 'paid' : 'pending';
+  }
+
+  return getPaymentStatus(student.next_payment_date, student.last_payment_date);
+};
+
 /**
  * Calcula a próxima data de vencimento baseada no dia de pagamento
  * e no histórico de pagamentos do aluno.

@@ -25,7 +25,7 @@ export default function FreeTrial() {
     let mounted = true;
     const activateTrial = async () => {
       setIsSubmitting(true);
-      const { data, error: trialError } = await supabase.functions.invoke('start-trial');
+      const { data, error: trialError } = await supabase.functions.invoke('start-trial', { body: {} });
       if (!mounted) return;
       if (trialError || data?.error) {
         setError(data?.error || trialError?.message || 'Não foi possível iniciar o teste gratuito.');
@@ -60,7 +60,7 @@ export default function FreeTrial() {
     }
 
     if (data?.session) {
-      const { data: trialData, error: trialError } = await supabase.functions.invoke('start-trial');
+      const { data: trialData, error: trialError } = await supabase.functions.invoke('start-trial', { body: {} });
       if (trialError || trialData?.error) {
         setError(trialData?.error || trialError?.message || 'Não foi possível iniciar seu teste.');
         setIsSubmitting(false);

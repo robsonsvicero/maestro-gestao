@@ -95,7 +95,22 @@ Deno.serve(async (request: Request) => {
     updated_at: now,
   });
 
-  if (createError) return reply(500, { error: 'Could not start trial access' });
+  if (createError) {
+    const { data: retryTrial, error: retryError } = await admin
+      .from('entitlements')
+      .select('auth_user_id, access_ends_at')
+      .eq('auth_user_id', user.id)
+      .eq('access_type', 'trial')
+      .eq('provider', 'internal')
+      .maybeSingle();
+
+    if (!retryError && retryTrial?.access_ends_at) {
+      await notifyRegistration('trial', email, 'internal', `Acesso já existente em ${new Date(now).toISOString()}`);
+      return reply(200, { status: 'active', trial_ends_at: retryTrial.access_ends_at });
+    }
+
+    return reply(500, { error: 'Could not start trial access' });
+  }
 
   await notifyRegistration('trial', email, 'internal', `Acesso criado em ${new Date(now).toISOString()}`);
   return reply(200, { status: 'active', trial_ends_at: endsAt });

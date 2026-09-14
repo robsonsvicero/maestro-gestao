@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Plus, Calendar as CalendarIcon, List, CalendarDays } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { getPaymentStatus } from "@/utils/paymentUtils";
+import { getLessonPaymentStatus } from "@/utils/paymentUtils";
 
 import LessonForm from "../components/schedule/LessonForm";
 import CalendarView from "../components/schedule/CalendarView";
@@ -43,7 +43,7 @@ export default function Schedule() {
 
     return {
       ...lesson,
-      payment_status: getPaymentStatus(student.next_payment_date, student.last_payment_date),
+      payment_status: getLessonPaymentStatus(student, lesson),
     };
   });
 

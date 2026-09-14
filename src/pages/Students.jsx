@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getNextPaymentDate, getPaymentStatus } from "@/utils/paymentUtils";
 import { generateAutomaticLessons, deleteFutureLessons, getLessonDayOfWeek, rescheduleFutureLessons } from "@/utils/lessonUtils";
-import { getLocalDateString } from "@/utils/dateUtils";
+import { getLocalDateString, parseLocalDate } from "@/utils/dateUtils";
 
 import StudentForm from "../components/students/StudentForm";
 import StudentCard from "../components/students/StudentCard";
@@ -280,6 +280,31 @@ export default function Students() {
     }
   };
 
+  const syncWeeklyLessonsPaymentStatus = async (student, week, status = 'paid') => {
+    if (!student?.id || !week?.weekStart || !week?.weekEnd) return;
+
+    const lessons = await base44.entities.Lesson.list();
+    const start = parseLocalDate(week.weekStart);
+    const end = parseLocalDate(week.weekEnd);
+
+    const matchingLessons = (lessons || []).filter((lesson) => {
+      if (lesson.student_id !== student.id) return false;
+      const lessonDate = lesson.date || lesson.lesson_date;
+      if (!lessonDate) return false;
+      const date = parseLocalDate(lessonDate);
+      return date >= start && date <= end;
+    });
+
+    await Promise.all(matchingLessons.map(async (lesson) => {
+      await base44.entities.Lesson.update(lesson.id, {
+        ...lesson,
+        payment_status: status,
+      });
+    }));
+
+    await queryClient.invalidateQueries({ queryKey: ['lessons'] });
+  };
+
   const createWeeklyReceiptForStudent = async (student, week, paymentDate = getLocalDateString(), paymentMethod = 'pix') => {
     return base44.entities.Receipt.create({
       receipt_number: `REC-${Date.now()}`,
@@ -325,6 +350,9 @@ export default function Students() {
       payment_status: 'paid',
       last_payment_date: today,
     });
+
+    await syncWeeklyLessonsPaymentStatus(updatedStudent, week, 'paid');
+
     queryClient.invalidateQueries({ queryKey: ['students'] });
     setSelectedStudentForFees(updatedStudent);
 
@@ -336,6 +364,7 @@ export default function Students() {
   };
 
   const handleGenerateWeeklyReceipt = async (student, week, paymentMethod = 'pix') => {
+    await syncWeeklyLessonsPaymentStatus(student, week, 'paid');
     const receipt = await createWeeklyReceiptForStudent(student, week, getLocalDateString(), paymentMethod);
     queryClient.invalidateQueries({ queryKey: ['receipts'] });
     setPreviewReceipt(receipt);

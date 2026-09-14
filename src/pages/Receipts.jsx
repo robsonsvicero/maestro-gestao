@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { getLocalDateString, parseLocalDate } from "@/utils/dateUtils";
+import { getWeekStartKey } from "@/utils/paymentUtils";
 
 import ReceiptForm from "../components/receipts/ReceiptForm";
 import ReceiptList from "../components/receipts/ReceiptList";
@@ -44,6 +46,32 @@ export default function Receipts() {
 
   const settings = appSettings[0] || {};
 
+  const syncWeeklyLessonsPaymentStatus = async (student, weekStart, weekEnd) => {
+    if (!student?.id || !weekStart || !weekEnd) return;
+
+    const lessons = await base44.entities.Lesson.list();
+    const start = parseLocalDate(weekStart);
+    const end = parseLocalDate(weekEnd);
+
+    const matchingLessons = (lessons || []).filter((lesson) => {
+      if (lesson.student_id !== student.id) return false;
+      const lessonDate = lesson.date || lesson.lesson_date;
+      if (!lessonDate) return false;
+
+      const lessonParsedDate = parseLocalDate(lessonDate);
+      return lessonParsedDate >= start && lessonParsedDate <= end;
+    });
+
+    await Promise.all(matchingLessons.map(async (lesson) => {
+      await base44.entities.Lesson.update(lesson.id, {
+        ...lesson,
+        payment_status: 'paid',
+      });
+    }));
+
+    queryClient.invalidateQueries({ queryKey: ['lessons'] });
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const payload = sanitizeReceiptPayload(data);
@@ -53,6 +81,39 @@ export default function Receipts() {
         throw new Error('Não foi possível criar o recibo. Verifique autenticação e políticas do Supabase.');
       }
 
+      const student = students.find((item) => item.id === payload.student_id);
+      if (student?.payment_type === 'weekly') {
+        const paymentDate = parseLocalDate(payload.payment_date || getLocalDateString());
+        const weekStart = getWeekStartKey(payload.payment_date || getLocalDateString());
+        const weekEnd = new Date(paymentDate);
+        weekEnd.setDate(paymentDate.getDate() + 6);
+
+        const paymentHistory = Array.isArray(student.payment_history) ? [...student.payment_history] : [];
+        const paymentEntry = {
+          period: 'week',
+          week_start: weekStart,
+          week_end: getLocalDateString(weekEnd),
+          status: 'paid',
+          paid_at: payload.payment_date,
+          amount: Number(payload.amount),
+          payment_method: payload.payment_method,
+        };
+
+        const index = paymentHistory.findIndex((entry) => entry?.week_start === weekStart);
+        if (index >= 0) paymentHistory[index] = paymentEntry;
+        else paymentHistory.push(paymentEntry);
+
+        await base44.entities.Student.update(student.id, {
+          ...student,
+          payment_history: paymentHistory,
+          payment_status: 'paid',
+          last_payment_date: payload.payment_date,
+        });
+
+        await syncWeeklyLessonsPaymentStatus(student, weekStart, getLocalDateString(weekEnd));
+        queryClient.invalidateQueries({ queryKey: ['students'] });
+      }
+
       await base44.entities.Transaction.create({
         type: "income",
         category: "lesson_payment",
@@ -60,7 +121,8 @@ export default function Receipts() {
         description: payload.description,
         date: payload.payment_date,
         payment_method: payload.payment_method,
-        student_name: payload.student_name
+        student_name: payload.student_name,
+        student_id: payload.student_id,
       });
 
       return receipt;
