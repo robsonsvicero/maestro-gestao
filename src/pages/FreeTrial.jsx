@@ -60,12 +60,6 @@ export default function FreeTrial() {
     }
 
     if (data?.session) {
-      const { data: trialData, error: trialError } = await supabase.functions.invoke('start-trial', { body: {} });
-      if (trialError || trialData?.error) {
-        setError(trialData?.error || trialError?.message || 'Não foi possível iniciar seu teste.');
-        setIsSubmitting(false);
-        return;
-      }
       await refreshAccess();
       setShowSuccessModal(true);
       setIsSubmitting(false);
