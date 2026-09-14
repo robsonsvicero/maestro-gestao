@@ -45,7 +45,7 @@ const getLessonDayOfWeek = (lessonDay: string) => {
   return dayMap[normalizedDay];
 };
 
-const buildLessonWindowForStudent = (student: any, referenceDate = new Date()) => {
+const buildLessonWindowForStudent = (student: any, referenceDate = new Date(), durationMinutes = 60) => {
   if (!student || !student.id || !student.lesson_day || !student.lesson_time || student.student_status !== 'active') {
     return [] as Array<Record<string, unknown>>;
   }
@@ -59,7 +59,7 @@ const buildLessonWindowForStudent = (student: any, referenceDate = new Date()) =
   firstLessonDate.setHours(0, 0, 0, 0);
   firstLessonDate.setDate(firstLessonDate.getDate() + (targetDayOfWeek - firstLessonDate.getDay() + 7) % 7);
 
-  const duration = 60;
+  const duration = Number(durationMinutes) || 60;
 
   return Array.from({ length: 52 }, (_, week) => {
     const date = new Date(firstLessonDate);
@@ -162,7 +162,8 @@ Deno.serve(async (request: Request) => {
       }
 
       try {
-        const weekWindow = buildLessonWindowForStudent(student, now);
+        const durationMinutes = Number(student.default_lesson_duration ?? 60) || 60;
+        const weekWindow = buildLessonWindowForStudent(student, now, durationMinutes);
         const missingLessons = weekWindow.filter((lesson: any) => {
           const key = `${student.id}:${lesson.date}:${lesson.start_time}`;
           return !lessonKeys.has(key);

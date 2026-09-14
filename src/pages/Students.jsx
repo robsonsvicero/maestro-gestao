@@ -53,7 +53,8 @@ export default function Students() {
       // Agendar aulas automaticamente se tiver dia/horário definido e status ativo
       if (createdStudent.lesson_day && createdStudent.lesson_time && createdStudent.student_status === 'active') {
         try {
-          const createdLessons = await generateAutomaticLessons(createdStudent, base44);
+          const durationMinutes = Number(settings.default_lesson_duration) || 60;
+          const createdLessons = await generateAutomaticLessons(createdStudent, base44, durationMinutes);
           queryClient.invalidateQueries({ queryKey: ['lessons'] });
           toast.success(`Aluno salvo e ${createdLessons.length} aulas agendadas automaticamente!`);
         } catch (error) {
@@ -152,7 +153,8 @@ export default function Students() {
 
     // Se mudou de inativo para ativo, criar novas aulas
     if (!wasActive && data.student_status === 'active' && data.lesson_day && data.lesson_time) {
-      generateAutomaticLessons({ ...data, id: editingStudent.id }, base44).then((createdLessons) => {
+      const durationMinutes = Number(settings.default_lesson_duration) || 60;
+      generateAutomaticLessons({ ...data, id: editingStudent.id }, base44, durationMinutes).then((createdLessons) => {
         queryClient.invalidateQueries({ queryKey: ['lessons'] });
         toast.success(`${createdLessons.length} aulas agendadas automaticamente!`);
       }).catch((error) => {
@@ -178,11 +180,13 @@ export default function Students() {
     if (!rescheduleStudent) return;
     setIsRescheduling(true);
     try {
+      const durationMinutes = Number(settings.default_lesson_duration) || 60;
       const { deletedCount, createdCount } = await rescheduleFutureLessons(
         rescheduleStudent,
         newDay,
         newTime,
         base44,
+        durationMinutes,
       );
       // refetchQueries força recarregamento imediato dos dados do servidor
       await queryClient.refetchQueries({ queryKey: ['students'] });

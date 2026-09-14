@@ -42,7 +42,7 @@ export const getLessonDayOfWeek = (lessonDay) => {
  * Mantém a regra de idempotência: o método não grava; apenas
  * fornece o lote a ser persistido pela rotina de sincronização.
  */
-export const buildLessonWindowForStudent = (student, referenceDate = new Date()) => {
+export const buildLessonWindowForStudent = (student, referenceDate = new Date(), durationMinutes = 60) => {
   if (!student || !student.id || !student.lesson_day || !student.lesson_time || student.student_status !== 'active') {
     return [];
   }
@@ -56,7 +56,7 @@ export const buildLessonWindowForStudent = (student, referenceDate = new Date())
   firstLessonDate.setHours(0, 0, 0, 0);
   firstLessonDate.setDate(firstLessonDate.getDate() + (targetDayOfWeek - firstLessonDate.getDay() + 7) % 7);
 
-  const duration = 60;
+  const duration = Number(durationMinutes) || 60;
 
   return Array.from({ length: 52 }, (_, week) => {
     const date = new Date(firstLessonDate);
@@ -81,12 +81,12 @@ export const buildLessonWindowForStudent = (student, referenceDate = new Date())
  * Gera 52 agendamentos semanais para um aluno ativo.
  * @returns {Promise<Array>} Aulas criadas
  */
-export const generateAutomaticLessons = async (student, base44) => {
+export const generateAutomaticLessons = async (student, base44, durationMinutes = 60) => {
   if (!student.id || !student.lesson_day || !student.lesson_time || student.student_status !== 'active') {
     return [];
   }
 
-  const lessons = buildLessonWindowForStudent(student, new Date());
+  const lessons = buildLessonWindowForStudent(student, new Date(), durationMinutes);
   if (lessons.length === 0) {
     return [];
   }
@@ -151,9 +151,10 @@ export const deleteFutureLessons = async (studentId, base44) => {
  * @param {string} newLessonDay - Novo dia da semana (ex: "segunda-feira")
  * @param {string} newLessonTime - Novo horário (ex: "14:30")
  * @param {Object} base44 - Cliente base44
+ * @param {number} durationMinutes - Duração padrão usada para gerar o bloco
  * @returns {Promise<{deletedCount: number, createdCount: number}>}
  */
-export const rescheduleFutureLessons = async (student, newLessonDay, newLessonTime, base44) => {
+export const rescheduleFutureLessons = async (student, newLessonDay, newLessonTime, base44, durationMinutes = 60) => {
   const targetDayOfWeek = getLessonDayOfWeek(newLessonDay);
   if (targetDayOfWeek === undefined) {
     throw new Error('Dia da aula inválido para o reagendamento.');
@@ -178,6 +179,7 @@ export const rescheduleFutureLessons = async (student, newLessonDay, newLessonTi
       student_status: 'active',
     },
     firstLessonDate,
+    Number(durationMinutes) || 60,
   );
 
   const createdLessons = await Promise.all(
