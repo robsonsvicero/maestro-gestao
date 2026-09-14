@@ -44,7 +44,6 @@ const navigationItems = [
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard },
   { title: "Agenda", url: createPageUrl("Schedule"), icon: Calendar },
   { title: "Agendamento Auto", url: createPageUrl("AutoSchedule"), icon: Sparkles },
-  { title: "Meus Horários", url: createPageUrl("MyHours"), icon: Clock },
   { title: "Finanças", url: createPageUrl("Finances"), icon: Wallet },
   { title: "Alunos", url: createPageUrl("Students"), icon: Users },
   { title: "Recibos", url: createPageUrl("Receipts"), icon: ReceiptIcon },
@@ -168,7 +167,6 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
 
   const moreNavItems = [
     { title: "Agendamento Auto", url: createPageUrl("AutoSchedule"), icon: Sparkles },
-    { title: "Meus Horários", url: createPageUrl("MyHours"), icon: Clock },
     { title: "Recibos", url: createPageUrl("Receipts"), icon: ReceiptIcon },
     ...(user?.role === 'admin' ? [{ title: "Licenças", url: createPageUrl("AdminLicenses"), icon: KeyRound }] : [])
   ];

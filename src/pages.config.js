@@ -6,7 +6,6 @@ import Students from './pages/Students';
 import Settings from './pages/Settings';
 import Schedule from './pages/Schedule';
 import AutoSchedule from './pages/AutoSchedule';
-import MyHours from './pages/MyHours';
 import Budget from './pages/Budget';
 import Login from './pages/Login';
 import ActivateAccess from './pages/ActivateAccess';
@@ -26,7 +25,6 @@ export const PAGES = {
     "Settings": Settings,
     "Schedule": Schedule,
     "AutoSchedule": AutoSchedule,
-    "MyHours": MyHours,
     "Budget": Budget,
     "Login": Login,
     "ActivateAccess": ActivateAccess,

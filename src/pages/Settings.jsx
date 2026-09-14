@@ -10,8 +10,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Settings as SettingsIcon, Image, Upload, Lock, CalendarCheck, CreditCard, XCircle, Eye, EyeOff } from "lucide-react";
+import { Settings as SettingsIcon, Image, Upload, Lock, CalendarCheck, CreditCard, XCircle, Eye, EyeOff, Clock, Plus, Trash2 } from "lucide-react";
 import { formatPhone, unformatPhone } from "@/utils/formatUtils";
+
+const dayLabels = {
+  monday: "Segunda-feira",
+  tuesday: "Terça-feira",
+  wednesday: "Quarta-feira",
+  thursday: "Quinta-feira",
+  friday: "Sexta-feira",
+  saturday: "Sábado",
+  sunday: "Domingo"
+};
+
+const emptyHours = {
+  monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: []
+};
 
 const KIWIFY_CHECKOUTS = {
   monthly: 'https://pay.kiwify.com.br/LNHszQc',
@@ -42,6 +56,7 @@ export default function Settings() {
     teacher_phone: "",
     cpf_cnpj: "",
     default_lesson_duration: 60,
+    available_hours: emptyHours,
   });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -78,6 +93,7 @@ export default function Settings() {
         teacher_phone: settings[0].teacher_phone || "",
         cpf_cnpj: settings[0].cpf_cnpj || "",
         default_lesson_duration: settings[0].default_lesson_duration || 60,
+        available_hours: settings[0].available_hours || emptyHours,
       });
     }
   }, [settings]);
@@ -208,6 +224,40 @@ export default function Settings() {
   const handleSubmit = (e) => {
     e.preventDefault();
     updateMutation.mutate(formData);
+  };
+
+  const addTimeSlot = (day) => {
+    setFormData({
+      ...formData,
+      available_hours: {
+        ...formData.available_hours,
+        [day]: [...(formData.available_hours?.[day] || []), { start: "09:00", end: "10:00" }]
+      }
+    });
+  };
+
+  const removeTimeSlot = (day, index) => {
+    const newSlots = [...(formData.available_hours?.[day] || [])];
+    newSlots.splice(index, 1);
+    setFormData({
+      ...formData,
+      available_hours: {
+        ...formData.available_hours,
+        [day]: newSlots
+      }
+    });
+  };
+
+  const updateTimeSlot = (day, index, field, value) => {
+    const newSlots = [...(formData.available_hours?.[day] || [])];
+    newSlots[index] = { ...newSlots[index], [field]: value };
+    setFormData({
+      ...formData,
+      available_hours: {
+        ...formData.available_hours,
+        [day]: newSlots
+      }
+    });
   };
 
   const handlePasswordUpdate = async (e) => {
@@ -427,6 +477,67 @@ export default function Settings() {
               })}
             </div>
             {billingMessage && <p className="text-sm text-amber-700 dark:text-amber-300">{billingMessage}</p>}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xl">
+          <CardHeader className="border-b">
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-[#094C7E]" />
+              Horários Disponíveis
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+            {Object.entries(dayLabels).map(([day, label]) => (
+              <div key={day} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-slate-700 dark:text-slate-300">{label}</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addTimeSlot(day)}
+                    className="border-[#094C7E]/30 text-[#094C7E] hover:bg-[#094C7E]/5"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Horário
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {(formData.available_hours?.[day] || []).map((slot, index) => (
+                    <div key={`${day}-${index}`} className="flex items-center gap-2">
+                      <Input
+                        type="time"
+                        value={slot.start}
+                        onChange={(e) => updateTimeSlot(day, index, 'start', e.target.value)}
+                        className="flex-1 bg-white dark:bg-slate-700"
+                      />
+                      <span className="text-slate-600 dark:text-slate-400">até</span>
+                      <Input
+                        type="time"
+                        value={slot.end}
+                        onChange={(e) => updateTimeSlot(day, index, 'end', e.target.value)}
+                        className="flex-1 bg-white dark:bg-slate-700"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeTimeSlot(day, index)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  {(formData.available_hours?.[day] || []).length === 0 && (
+                    <p className="text-sm text-slate-400 dark:text-slate-500">
+                      Nenhum horário configurado
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
 

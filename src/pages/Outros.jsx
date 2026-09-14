@@ -12,7 +12,6 @@ import { useAuth } from '@/lib/AuthContext';
 
 const otherItems = [
   { title: 'Agendamento Auto', description: 'Organize seus agendamentos', page: 'AutoSchedule', icon: CalendarClock },
-  { title: 'Meus Horários', description: 'Configure sua disponibilidade', page: 'MyHours', icon: Clock3 },
   { title: 'Finanças', description: 'Acompanhe seus recebimentos', page: 'Finances', icon: Wallet },
   { title: 'Alunos', description: 'Consulte seus alunos', page: 'Students', icon: Users },
   { title: 'Recibos', description: 'Emita e consulte recibos', page: 'Receipts', icon: ReceiptText },
