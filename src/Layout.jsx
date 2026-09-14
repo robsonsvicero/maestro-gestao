@@ -28,6 +28,7 @@ import {
   SidebarHeader,
   SidebarFooter,
   SidebarProvider,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,23 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  useEffect(() => {
+    const handleSettingsUpdated = (event) => {
+      const nextSettings = event?.detail;
+      if (!nextSettings) return;
+
+      setAppSettings((currentSettings) => ({
+        ...(currentSettings || {}),
+        ...nextSettings,
+      }));
+    };
+
+    window.addEventListener('app-settings-updated', handleSettingsUpdated);
+    return () => {
+      window.removeEventListener('app-settings-updated', handleSettingsUpdated);
+    };
   }, []);
 
   const loadData = async () => {
@@ -166,15 +184,18 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
       <div className="min-h-screen flex w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
         <Sidebar className="border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 no-print transition-colors">
           <SidebarHeader className="border-b border-slate-200 dark:border-slate-800 p-4">
-            <div className="flex items-center gap-3">
-              <img
-                src="/logo_maeztro.webp"
-                alt="Logo MAEZTRO"
-                className="h-11 w-11 shrink-0 rounded-full object-contain"
-              />
-              <h2 className="font-bold text-base leading-tight text-slate-900 dark:text-slate-100">
-                MAEZTRO Gestão
-              </h2>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <img
+                  src="/logo_maeztro.webp"
+                  alt="Logo MAEZTRO"
+                  className="h-11 w-11 shrink-0 rounded-full object-contain"
+                />
+                <h2 className="font-bold text-base leading-tight text-slate-900 dark:text-slate-100">
+                  MAEZTRO Gestão
+                </h2>
+              </div>
+              <SidebarTrigger className="h-8 w-8 shrink-0 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50" />
             </div>
           </SidebarHeader>
           

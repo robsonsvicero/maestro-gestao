@@ -192,9 +192,12 @@ export default function Settings() {
 
       return base44.entities.AppSettings.create(data);
     },
-    onSuccess: () => {
+    onSuccess: (savedSettings) => {
       setSaveFeedback({ type: "success", message: "Configurações salvas com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+      window.dispatchEvent(new CustomEvent('app-settings-updated', {
+        detail: savedSettings || formData,
+      }));
       setTimeout(() => setSaveFeedback({ type: "", message: "" }), 3000);
     },
     onError: (error) => {
