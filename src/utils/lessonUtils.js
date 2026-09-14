@@ -38,26 +38,27 @@ export const getLessonDayOfWeek = (lessonDay) => {
 };
 
 /**
- * Gera 52 agendamentos semanais para um aluno ativo.
- * @returns {Promise<Array>} Aulas criadas
+ * Constrói o bloco determinístico de 52 aulas futuras.
+ * Mantém a regra de idempotência: o método não grava; apenas
+ * fornece o lote a ser persistido pela rotina de sincronização.
  */
-export const generateAutomaticLessons = async (student, base44) => {
-  if (!student.id || !student.lesson_day || !student.lesson_time || student.student_status !== 'active') {
+export const buildLessonWindowForStudent = (student, referenceDate = new Date()) => {
+  if (!student || !student.id || !student.lesson_day || !student.lesson_time || student.student_status !== 'active') {
     return [];
   }
 
   const targetDayOfWeek = getLessonDayOfWeek(student.lesson_day);
-
   if (targetDayOfWeek === undefined) {
     throw new Error('Dia da aula inválido para o agendamento automático.');
   }
 
-  const firstLessonDate = new Date();
+  const firstLessonDate = new Date(referenceDate);
   firstLessonDate.setHours(0, 0, 0, 0);
   firstLessonDate.setDate(firstLessonDate.getDate() + (targetDayOfWeek - firstLessonDate.getDay() + 7) % 7);
 
   const duration = 60;
-  const lessons = Array.from({ length: 52 }, (_, week) => {
+
+  return Array.from({ length: 52 }, (_, week) => {
     const date = new Date(firstLessonDate);
     date.setDate(date.getDate() + week * 7);
 
@@ -74,6 +75,21 @@ export const generateAutomaticLessons = async (student, base44) => {
       notes: `Aula agendada automaticamente para ${student.full_name}`,
     };
   });
+};
+
+/**
+ * Gera 52 agendamentos semanais para um aluno ativo.
+ * @returns {Promise<Array>} Aulas criadas
+ */
+export const generateAutomaticLessons = async (student, base44) => {
+  if (!student.id || !student.lesson_day || !student.lesson_time || student.student_status !== 'active') {
+    return [];
+  }
+
+  const lessons = buildLessonWindowForStudent(student, new Date());
+  if (lessons.length === 0) {
+    return [];
+  }
 
   const createdLessons = await Promise.all(lessons.map(async (lesson) => {
     const created = await base44.entities.Lesson.create(lesson);
@@ -147,23 +163,15 @@ export const rescheduleFutureLessons = async (student, newLessonDay, newLessonTi
   firstLessonDate.setDate(today.getDate() + daysUntilNext);
 
   // 3. Gerar 52 aulas a partir do novo padrão
-  const duration = 60;
-  const newLessons = Array.from({ length: 52 }, (_, week) => {
-    const date = new Date(firstLessonDate);
-    date.setDate(date.getDate() + week * 7);
-    return {
-      student_id: student.id,
-      student_name: student.full_name,
-      date: toDateString(date),
-      start_time: newLessonTime,
-      end_time: calculateEndTime(newLessonTime, duration),
-      duration,
-      status: 'scheduled',
-      instrument: student.instrument,
-      payment_status: 'pending',
-      notes: `Aula agendada automaticamente para ${student.full_name}`,
-    };
-  });
+  const newLessons = buildLessonWindowForStudent(
+    {
+      ...student,
+      lesson_day: newLessonDay,
+      lesson_time: newLessonTime,
+      student_status: 'active',
+    },
+    firstLessonDate,
+  );
 
   const createdLessons = await Promise.all(
     newLessons.map(async (lesson) => {

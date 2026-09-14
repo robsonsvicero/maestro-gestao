@@ -1,0 +1,24 @@
+name: Sync Recurrence
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
+
+jobs:
+  sync-recurrence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Supabase sync-recurrence edge function
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_FUNCTION_URL: ${{ secrets.SUPABASE_FUNCTION_URL }}
+        run: |
+          set -euo pipefail
+
+          FUNCTION_URL="${SUPABASE_FUNCTION_URL:-https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/sync-recurrence}"
+          TODAY="$(date -u +%F)"
+
+          curl -fsS -X POST "$FUNCTION_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{\"monthsAhead\":12,\"referenceDate\":\"${TODAY}\"}"

@@ -1,4 +1,42 @@
-import { getLocalDateString, parseLocalDate } from './dateUtils';
+import { getLocalDateString, parseLocalDate } from './dateUtils.js';
+
+/**
+ * Cria o calendar de parcelas mensais ausentes, com formato idempotente
+ * para o aluno mensal. A rotina devolve entradas pendentes que faltam
+ * no histórico de pagamentos e mantém o histórico inteiro preservado.
+ */
+export const buildMissingMonthlyPaymentHistoryEntries = (student, referenceDate = new Date(), monthsAhead = 12) => {
+  const paymentHistory = Array.isArray(student.payment_history) ? student.payment_history : [];
+  const paymentDay = Number(student.payment_day || 1);
+  const year = referenceDate.getFullYear();
+  const month = referenceDate.getMonth();
+
+  const entries = [];
+  for (let index = 0; index < monthsAhead; index += 1) {
+    const targetMonth = month + index + 1;
+    const targetYear = Math.floor(targetMonth / 12) + year;
+    const normalizedMonth = ((targetMonth - 1) % 12) + 1;
+
+    const existing = paymentHistory.some((entry) => {
+      return Number(entry.month) === normalizedMonth && Number(entry.year) === targetYear;
+    });
+
+    if (!existing) {
+      entries.push({
+        month: String(normalizedMonth),
+        year: String(targetYear),
+        status: 'pending',
+        amount: Number(student.monthly_payment || 0),
+        paid_at: '',
+        payment_day: paymentDay,
+        payment_method: 'pix',
+        period: 'month',
+      });
+    }
+  }
+
+  return entries;
+};
 
 export const getWeekStartKey = (value) => {
   const date = value instanceof Date ? value : parseLocalDate(value);
