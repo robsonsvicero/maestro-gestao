@@ -64,7 +64,7 @@ function NavigationLink({ to, children, className }) {
     <Link
       to={to}
       onClick={() => isMobile && setOpenMobile(false)}
-      className={`${className} ${isCollapsed ? 'justify-center gap-0 px-2 py-2' : 'gap-3 px-4'}`}
+      className={`${className ?? ''} flex items-center ${isCollapsed ? 'justify-center gap-0 px-2 py-2' : 'justify-start gap-3 px-4'}`}
     >
       {visibleChildren}
     </Link>
@@ -191,12 +191,15 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
       <div className="min-h-screen flex w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
         <Sidebar collapsible="icon" className="border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 no-print transition-colors overflow-hidden">
           <SidebarHeader className="border-b border-slate-200 dark:border-slate-800 p-3">
-            <div className="flex min-w-0 items-center justify-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <img
                 src="/logo_maeztro.webp"
                 alt="Logo MAEZTRO"
                 className="h-11 w-11 shrink-0 rounded-full object-contain"
               />
+              <span className="min-w-0 flex-1 truncate text-lg font-bold text-slate-900 dark:text-slate-100">
+                MAEZTRO Gestão
+              </span>
               <SidebarTrigger className="h-8 w-8 shrink-0 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50" />
             </div>
           </SidebarHeader>
@@ -217,9 +220,9 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                               : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                           }`}
                         >
-                          <NavigationLink to={item.url} className="flex items-center justify-center gap-3 px-4 py-3">
+                          <NavigationLink to={item.url} className="flex items-center gap-3 px-4 py-3">
                             <item.icon className="w-5 h-5 shrink-0" />
-                            <span className="font-medium hidden group-data-[collapsible=icon]:hidden">{item.title}</span>
+                            <span className="font-medium">{item.title}</span>
                           </NavigationLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -234,9 +237,9 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                           : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                       }`}
                     >
-                      <NavigationLink to={createPageUrl("Settings")} className="flex items-center justify-center gap-3 px-4 py-3">
+                      <NavigationLink to={createPageUrl("Settings")} className="flex items-center gap-3 px-4 py-3">
                         <Settings className="w-5 h-5 shrink-0" />
-                        <span className="font-medium hidden group-data-[collapsible=icon]:hidden">Configurações</span>
+                        <span className="font-medium">Configurações</span>
                       </NavigationLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -250,9 +253,9 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                             : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                         }`}
                       >
-                        <NavigationLink to={createPageUrl("AdminLicenses")} className="flex items-center justify-center gap-3 px-4 py-3">
+                        <NavigationLink to={createPageUrl("AdminLicenses")} className="flex items-center gap-3 px-4 py-3">
                           <KeyRound className="w-5 h-5 shrink-0" />
-                          <span className="font-medium hidden group-data-[collapsible=icon]:hidden">Licenças</span>
+                          <span className="font-medium">Licenças</span>
                         </NavigationLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -269,14 +272,14 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
                   <img
                     src={appSettings.logo_url}
                     alt={`Logo de ${appSettings.professional_name || 'profissional'}`}
-                    className="h-8 w-8 shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1 dark:border-slate-600"
+                    className="h-16 w-16 shrink-0 rounded-full border border-slate-200 bg-white object-cover p-1 dark:border-slate-600"
                   />
                 ) : (
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-400 dark:border-slate-600 dark:bg-slate-700">
-                    <Music className="h-5 w-5" />
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-400 dark:border-slate-600 dark:bg-slate-700">
+                    <Music className="h-8 w-8" />
                   </div>
                 )}
-                <div className="min-w-0 hidden group-data-[collapsible=icon]:hidden">
+                <div className="min-w-0 group-data-[collapsible=icon]:hidden">
                   <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
                     {appSettings?.professional_name || user?.full_name || "Profissional"}
                   </p>
@@ -288,11 +291,11 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
               
               <Button
                 variant="ghost"
-                className="mt-3 w-full justify-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300 hidden group-data-[collapsible=icon]:hidden"
+                className="mt-3 w-full justify-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300 group-data-[collapsible=icon]:hidden"
                 onClick={handleLogout}
               >
                 <LogOut className="w-4 h-4" />
-                <span className="hidden group-data-[collapsible=icon]:hidden">Sair</span>
+                <span>Sair</span>
               </Button>
             </div>
           </SidebarFooter>
