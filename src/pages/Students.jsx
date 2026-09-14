@@ -105,12 +105,20 @@ export default function Students() {
         throw new Error('Não foi possível arquivar o aluno. Verifique as permissões do Supabase.');
       }
 
-      return updated;
+      const deletedFutureLessons = await deleteFutureLessons(student.id, base44);
+
+      return { updated, deletedFutureLessons };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['lessons'] });
-      toast.success('Aluno arquivado com sucesso. Recebimentos e recibos permanecem no histórico financeiro.');
+
+      const deleted = result?.deletedFutureLessons || 0;
+      if (deleted > 0) {
+        toast.success(`Aluno arquivado com sucesso. ${deleted} agendamento(s) futuro(s) removido(s). Recebimentos e recibos permanecem no histórico financeiro.`);
+      } else {
+        toast.success('Aluno arquivado com sucesso. Recebimentos e recibos permanecem no histórico financeiro.');
+      }
     },
     onError: (error) => {
       toast.error(error?.message || 'Não foi possível arquivar o aluno.');

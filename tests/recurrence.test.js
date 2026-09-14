@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildLessonWindowForStudent } from '../src/utils/lessonUtils.js';
+import { buildLessonWindowForStudent, filterFutureLessonsForStudent } from '../src/utils/lessonUtils.js';
 import { buildMissingMonthlyPaymentHistoryEntries } from '../src/utils/paymentUtils.js';
 
 test('buildLessonWindowForStudent creates a deterministic 52-week lesson window', () => {
@@ -18,6 +18,22 @@ test('buildLessonWindowForStudent creates a deterministic 52-week lesson window'
   assert.equal(new Set(lessons.map((lesson) => lesson.date)).size, 52);
   assert.equal(lessons[0].start_time, '18:00');
   assert.equal(lessons[0].status, 'scheduled');
+});
+
+test('filterFutureLessonsForStudent keeps only future lessons for the target student in the deletion window', () => {
+  const today = new Date('2026-09-14T00:00:00');
+  const lessons = [
+    { id: 'lesson-pass', student_id: 'student-1', date: '2026-09-13' },
+    { id: 'lesson-future-1', student_id: 'student-1', date: '2026-09-20' },
+    { id: 'lesson-future-2', student_id: 'student-1', date: '2026-09-27' },
+    { id: 'lesson-other-student', student_id: 'student-2', date: '2026-09-20' },
+  ];
+
+  const filtered = filterFutureLessonsForStudent('student-1', lessons, today);
+
+  assert.equal(filtered.length, 2);
+  assert.ok(filtered.every((lesson) => lesson.student_id === 'student-1'));
+  assert.ok(filtered.every((lesson) => new Date(`${lesson.date}T00:00:00`) >= today));
 });
 
 test('buildMissingMonthlyPaymentHistoryEntries creates an idempotent pending schedule for the active year', () => {

@@ -115,19 +115,26 @@ export const deleteStudentLessons = async (studentId, base44) => {
   }
 };
 
+export const filterFutureLessonsForStudent = (studentId, lessons, referenceDate = new Date()) => {
+  if (!Array.isArray(lessons)) return [];
+
+  const today = new Date(referenceDate);
+  today.setHours(0, 0, 0, 0);
+
+  return lessons.filter((lesson) => {
+    const lessonDate = lesson.date || lesson.lesson_date;
+    if (lesson.student_id !== studentId || !lessonDate) return false;
+    return new Date(`${lessonDate}T00:00:00`) >= today;
+  });
+};
+
 /** Deleta todas as aulas futuras de um aluno. */
 export const deleteFutureLessons = async (studentId, base44) => {
   try {
     const lessons = await base44.entities.Lesson.list();
     if (!Array.isArray(lessons)) return 0;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const futureLessons = lessons.filter((lesson) => {
-      const lessonDate = lesson.date || lesson.lesson_date;
-      if (lesson.student_id !== studentId || !lessonDate) return false;
-      return new Date(`${lessonDate}T00:00:00`) >= today;
-    });
+    const futureLessons = filterFutureLessonsForStudent(studentId, lessons);
 
     await Promise.all(futureLessons.map((lesson) => base44.entities.Lesson.delete(lesson.id)));
     return futureLessons.length;
