@@ -7,6 +7,11 @@ create extension if not exists pg_cron with schema extensions;
 alter table public.student
   add column if not exists student_status text not null default 'active';
 
+-- Suporta o fluxo de arquivamento permanente do aluno em UI.
+alter table public.student
+  add column if not exists student_state text not null default 'active'
+  check (student_state in ('active', 'archived'));
+
 create or replace function public.maintain_future_lessons()
 returns integer
 language plpgsql
