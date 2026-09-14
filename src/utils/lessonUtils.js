@@ -84,6 +84,21 @@ export const generateAutomaticLessons = async (student, base44) => {
   return createdLessons;
 };
 
+/** Deleta todas as aulas de um aluno, futuras ou passadas. */
+export const deleteStudentLessons = async (studentId, base44) => {
+  try {
+    const lessons = await base44.entities.Lesson.list();
+    if (!Array.isArray(lessons)) return 0;
+
+    const matchingLessons = lessons.filter((lesson) => lesson.student_id === studentId);
+    await Promise.all(matchingLessons.map((lesson) => base44.entities.Lesson.delete(lesson.id)));
+    return matchingLessons.length;
+  } catch (error) {
+    console.error('Erro ao buscar aulas para deletar:', error);
+    return 0;
+  }
+};
+
 /** Deleta todas as aulas futuras de um aluno. */
 export const deleteFutureLessons = async (studentId, base44) => {
   try {

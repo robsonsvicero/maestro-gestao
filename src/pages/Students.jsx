@@ -96,22 +96,23 @@ export default function Students() {
 
   const deleteMutation = useMutation({
     mutationFn: async (student) => {
-      // 1. Deletar aulas futuras
-      await deleteFutureLessons(student.id, base44).catch(err => console.error(err));
+      const updated = await base44.entities.Student.update(student.id, {
+        student_status: 'inactive',
+      });
 
-      // 2. Deletar lançamentos financeiros vinculados ao aluno
-      await supabase.from('transaction').delete().eq('student_id', student.id).catch(err => console.error(err));
-      // Fallback para transações antigas sem student_id
-      await supabase.from('transaction').delete().eq('student_name', student.full_name).catch(err => console.error(err));
+      if (!updated) {
+        throw new Error('Não foi possível arquivar o aluno. Verifique as permissões do Supabase.');
+      }
 
-      // 3. Deletar o aluno
-      await base44.entities.Student.delete(student.id);
+      return updated;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['lessons'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      toast.success('Aluno, aulas futuras e lançamentos financeiros removidos.');
+      toast.success('Aluno arquivado com sucesso. Recebimentos e recibos permanecem no histórico financeiro.');
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Não foi possível arquivar o aluno.');
     },
   });
 
@@ -159,7 +160,7 @@ export default function Students() {
   };
 
   const handleDelete = (student) => {
-    if (confirm(`Tem certeza que deseja excluir o aluno ${student.full_name}? Isso também apagará as aulas futuras e o histórico financeiro.`)) {
+    if (confirm(`Tem certeza que deseja arquivar o aluno ${student.full_name}? Os recibos e pagamentos receberão um histórico preservado, e o aluno sairá da lista ativa.`)) {
       deleteMutation.mutate(student);
     }
   };
@@ -405,7 +406,9 @@ export default function Students() {
     setPreviewReceipt(receipt);
   };
 
-  const filteredStudents = students.filter(student =>
+  const activeStudents = students.filter((student) => student.student_status !== 'inactive');
+
+  const filteredStudents = activeStudents.filter(student =>
     student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.instrument?.toLowerCase().includes(searchTerm.toLowerCase())
   );
