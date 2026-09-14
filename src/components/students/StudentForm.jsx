@@ -27,6 +27,7 @@ export default function StudentForm({ student, onSubmit, onCancel, theme, isSubm
     payment_day: "",
     payment_status: "pending",
     student_status: "active",
+    student_state: "active",
     last_payment_date: "",
     next_payment_date: "",
     notes: ""

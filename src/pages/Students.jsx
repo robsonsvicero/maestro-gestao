@@ -98,6 +98,7 @@ export default function Students() {
     mutationFn: async (student) => {
       const updated = await base44.entities.Student.update(student.id, {
         student_status: 'inactive',
+        student_state: 'archived',
       });
 
       if (!updated) {
@@ -406,12 +407,12 @@ export default function Students() {
     setPreviewReceipt(receipt);
   };
 
-  const activeStudents = students.filter((student) => student.student_status !== 'inactive');
-
-  const filteredStudents = activeStudents.filter(student =>
-    student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.instrument?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStudents = students
+    .filter((student) => student.student_state !== 'archived')
+    .filter(student =>
+      student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.instrument?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   const sortedStudents = [...filteredStudents].sort((firstStudent, secondStudent) => {
     if (sortBy === 'lesson_day') {

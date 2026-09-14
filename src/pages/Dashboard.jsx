@@ -69,7 +69,9 @@ export default function Dashboard() {
   const monthTransactions = getMonthTransactions();
   const yearTransactions = getYearTransactions();
   const monthTotals = calculateTotals(monthTransactions);
-  const activeStudents = students.filter((student) => student.student_status !== 'inactive');
+  const activeStudents = students.filter(
+    (student) => student.student_status !== 'inactive' && student.student_state !== 'archived'
+  );
   void yearTransactions;
 
   return (

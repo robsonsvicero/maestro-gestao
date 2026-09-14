@@ -13,6 +13,8 @@ export default function StudentCard({
 }) {
   if (!student) return null;
 
+  const isInactive = student.student_status === 'inactive';
+
   const initials = (student.full_name || "Aluno")
     .split(" ")
     .filter(Boolean)
@@ -46,8 +48,15 @@ export default function StudentCard({
               <p className="truncate text-xs text-blue-100">{student.instrument || "Instrumento não informado"}</p>
             </div>
           </div>
-          <div className="shrink-0 rounded-full bg-white/10 px-2 py-1 text-[10px] font-medium uppercase tracking-wide">
-            {student.level || "Iniciante"}
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <div className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-medium uppercase tracking-wide">
+              {student.level || "Iniciante"}
+            </div>
+            {isInactive && (
+              <div className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-900">
+                Inativo
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -123,26 +132,35 @@ export default function StudentCard({
       </div>
 
       <div className="grid grid-cols-2 gap-2 border-t border-slate-200 p-4 dark:border-slate-700">
-        <Button variant="outline" size="sm" onClick={onOpenMonthlyFees} className="col-span-2 w-full min-w-0 px-2">
-          <CheckCircle className="mr-1.5 h-4 w-4 shrink-0" />
-          {student.payment_type === 'weekly' ? 'Pagamentos semanais' : 'Mensalidades'}
-        </Button>
-
-        {onReschedule && (
-          <Button variant="outline" size="sm" onClick={onReschedule} className="col-span-2 w-full min-w-0 px-2 border-[#094C7E]/40 text-[#094C7E] hover:bg-[#094C7E]/5 dark:border-blue-400/40 dark:text-blue-300">
-            <Clock className="mr-1.5 h-4 w-4 shrink-0" />
-            Reagendar Aula
+        {isInactive ? (
+          <Button variant="outline" size="sm" onClick={onEdit} className="col-span-2 w-full min-w-0 px-2">
+            <Pencil className="mr-1.5 h-4 w-4 shrink-0" />
+            Editar
           </Button>
-        )}
+        ) : (
+          <>
+            <Button variant="outline" size="sm" onClick={onOpenMonthlyFees} className="col-span-2 w-full min-w-0 px-2">
+              <CheckCircle className="mr-1.5 h-4 w-4 shrink-0" />
+              {student.payment_type === 'weekly' ? 'Pagamentos semanais' : 'Mensalidades'}
+            </Button>
 
-        <Button variant="outline" size="sm" onClick={onEdit} className="w-full min-w-0 px-2">
-          <Pencil className="mr-1.5 h-4 w-4 shrink-0" />
-          Editar
-        </Button>
-        <Button variant="destructive" size="sm" onClick={onDelete} className="w-full min-w-0 px-2">
-          <Trash2 className="mr-1.5 h-4 w-4 shrink-0" />
-          Excluir
-        </Button>
+            {onReschedule && (
+              <Button variant="outline" size="sm" onClick={onReschedule} className="col-span-2 w-full min-w-0 px-2 border-[#094C7E]/40 text-[#094C7E] hover:bg-[#094C7E]/5 dark:border-blue-400/40 dark:text-blue-300">
+                <Clock className="mr-1.5 h-4 w-4 shrink-0" />
+                Reagendar Aula
+              </Button>
+            )}
+
+            <Button variant="outline" size="sm" onClick={onEdit} className="w-full min-w-0 px-2">
+              <Pencil className="mr-1.5 h-4 w-4 shrink-0" />
+              Editar
+            </Button>
+            <Button variant="destructive" size="sm" onClick={onDelete} className="w-full min-w-0 px-2">
+              <Trash2 className="mr-1.5 h-4 w-4 shrink-0" />
+              Excluir
+            </Button>
+          </>
+        )}
       </div>
     </Card>
   );
