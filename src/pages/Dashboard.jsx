@@ -69,6 +69,7 @@ export default function Dashboard() {
   const monthTransactions = getMonthTransactions();
   const yearTransactions = getYearTransactions();
   const monthTotals = calculateTotals(monthTransactions);
+  const activeStudents = students.filter((student) => student.student_status !== 'inactive');
   void yearTransactions;
 
   return (
@@ -117,7 +118,7 @@ export default function Dashboard() {
         />
         <StatCard
           title="Alunos Ativos"
-          value={students.length}
+          value={activeStudents.length}
           icon={Users}
           iconColor="text-purple-600"
           bgGradient="from-purple-50 to-pink-50"
