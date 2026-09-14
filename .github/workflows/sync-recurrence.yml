@@ -8,6 +8,8 @@ on:
 jobs:
   sync-recurrence:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Call Supabase sync-recurrence edge function
         env:
@@ -18,7 +20,29 @@ jobs:
 
           FUNCTION_URL="${SUPABASE_FUNCTION_URL:-https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/sync-recurrence}"
           TODAY="$(date -u +%F)"
+          RESPONSE_FILE="${RUNNER_TEMP}/sync-recurrence-response.json"
+          HTTP_CODE_FILE="${RUNNER_TEMP}/sync-recurrence-http-code.txt"
 
-          curl -fsS -X POST "$FUNCTION_URL" \
+          curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" -X POST "$FUNCTION_URL" \
             -H 'Content-Type: application/json' \
-            -d "{\"monthsAhead\":12,\"referenceDate\":\"${TODAY}\"}"
+            -d "{\"monthsAhead\":12,\"referenceDate\":\"${TODAY}\"}" > "$HTTP_CODE_FILE"
+
+          HTTP_CODE="$(cat "$HTTP_CODE_FILE")"
+          echo "HTTP_STATUS=$HTTP_CODE"
+          echo "RESPONSE_BODY="
+          cat "$RESPONSE_FILE"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::sync-recurrence failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          python -m json.tool "$RESPONSE_FILE" >/dev/null
+
+      - name: Upload sync-recurrence response artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sync-recurrence-response
+          path: ${{ runner.temp }}/sync-recurrence-response.json
+          if-no-files-found: warn
