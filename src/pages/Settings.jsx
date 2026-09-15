@@ -32,6 +32,7 @@ const KIWIFY_CHECKOUTS = {
   annual: 'https://pay.kiwify.com.br/h4t2yde',
 };
 const isAndroidApp = Capacitor.getPlatform() === 'android';
+const SHOW_GOOGLE_CALENDAR_INTEGRATION = false;
 
 export default function Settings() {
   const queryClient = useQueryClient();
@@ -559,8 +560,8 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Google Calendar */}
-        <Card className="shadow-xl">
+        {SHOW_GOOGLE_CALENDAR_INTEGRATION && (
+          <Card className="shadow-xl">
           <CardHeader className="border-b">
             <CardTitle className="flex items-center gap-2">
               <CalendarCheck className="w-5 h-5 text-[#094C7E]" />
@@ -613,7 +614,8 @@ export default function Settings() {
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        )}
 
         <Card className="shadow-xl">
           <CardHeader className="border-b">
