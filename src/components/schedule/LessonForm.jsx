@@ -84,7 +84,7 @@ export default function LessonForm({ lesson, students, onSubmit, onCancel, theme
         <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
           <CalendarCheck className="w-4 h-4 text-blue-600" />
           <span className={`text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
-            Esta aula será sincronizada automaticamente com o Google Calendar
+            Esta aula será adicionada automaticamente ao Google Calendar
           </span>
         </div>
       )}

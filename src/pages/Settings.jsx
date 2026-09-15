@@ -211,6 +211,11 @@ export default function Settings() {
     onSuccess: (savedSettings) => {
       setSaveFeedback({ type: "success", message: "Configurações salvas com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+      if (formData.sync_with_google_calendar && formData.google_calendar_email) {
+        supabase.functions.invoke('sync-google-calendar').then(({ error }) => {
+          if (error) console.error('Erro ao sincronizar aulas existentes:', error);
+        });
+      }
       window.dispatchEvent(new CustomEvent('app-settings-updated', {
         detail: savedSettings || formData,
       }));

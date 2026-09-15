@@ -1,17 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Plus, Calendar as CalendarIcon, List, CalendarDays } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format } from "date-fns";
 import { getLessonPaymentStatus } from "@/utils/paymentUtils";
 
 import LessonForm from "../components/schedule/LessonForm";
 import CalendarView from "../components/schedule/CalendarView";
 import ListView from "../components/schedule/ListView";
 import DayView from "../components/schedule/DayView";
+import { createGoogleCalendarEvent, syncPendingGoogleCalendarLessons } from "@/utils/googleCalendar";
 
 export default function Schedule() {
   const [showForm, setShowForm] = useState(false);
@@ -37,6 +37,15 @@ export default function Schedule() {
   });
 
   const settings = appSettings[0] || {};
+
+  useEffect(() => {
+    if (!settings.sync_with_google_calendar || !settings.google_calendar_email) return;
+
+    syncPendingGoogleCalendarLessons().catch((error) => {
+      console.error("Error syncing pending lessons with Google Calendar:", error);
+    });
+  }, [settings.sync_with_google_calendar, settings.google_calendar_email]);
+
   const lessonsWithPaymentStatus = lessons.map((lesson) => {
     const student = students.find((item) => item.id === lesson.student_id);
     if (!student) return lesson;
@@ -54,41 +63,11 @@ export default function Schedule() {
       // Sync with Google Calendar if enabled
       if (settings.sync_with_google_calendar && settings.google_calendar_email) {
         try {
-          const student = students.find(s => s.id === data.student_id);
-
-          const eventDescription = `
-Aula de ${data.instrument}
-Aluno: ${data.student_name}
-${data.location ? `Local: ${data.location}` : ''}
-${data.notes ? `Observações: ${data.notes}` : ''}
-${data.price ? `Valor: R$ ${data.price.toFixed(2)}` : ''}
-          `.trim();
-
-          // Send event to teacher's calendar
-          await base44.integrations.Core.SendEmail({
-            from_name: settings.professional_name || "Sistema",
-            to: settings.google_calendar_email,
-            subject: `Aula Agendada - ${data.student_name} - ${format(new Date(data.date), 'dd/MM/yyyy')} ${data.start_time}`,
-            body: `${eventDescription}\n\nEvento do Google Calendar será criado automaticamente.`
+          await createGoogleCalendarEvent({
+            calendarId: settings.google_calendar_email,
+            professionalName: settings.professional_name,
+            lesson: { ...data, id: lesson.id },
           });
-
-          // If student has email, send to their calendar too
-          if (student?.email) {
-            await base44.integrations.Core.SendEmail({
-              from_name: settings.professional_name || "Profissional",
-              to: student.email,
-              subject: `Aula Agendada - ${data.instrument}`,
-              body: `
-Olá ${data.student_name},
-
-Sua aula foi agendada com sucesso!
-
-${eventDescription}
-
-Nos vemos em breve!
-              `
-            });
-          }
         } catch (error) {
           console.error("Error syncing with Google Calendar:", error);
         }
