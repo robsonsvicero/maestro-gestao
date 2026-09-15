@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createPageUrl } from '@/utils';
+import PublicHome from '@/pages/PublicHome';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -71,14 +72,14 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      if (location.pathname !== '/login') {
+      if (!['/', '/login'].includes(location.pathname)) {
         navigateToLogin();
         return null;
       }
     }
   }
 
-  const publicPaths = ['/login', '/teste-gratis', '/definir-senha', '/primeiro-acesso'];
+  const publicPaths = ['/', '/login', '/teste-gratis', '/definir-senha', '/primeiro-acesso'];
   if (!isAuthenticated && !publicPaths.includes(location.pathname)) {
     return <Navigate to="/login" replace />;
   }
@@ -104,7 +105,7 @@ const AuthenticatedApp = () => {
         </LayoutWrapper>
       } />
       <Route path="/" element={
-        isAdmin ? <Navigate to="/admin-licenses" replace /> :
+        !isAuthenticated ? <PublicHome /> : isAdmin ? <Navigate to="/admin-licenses" replace /> :
         <LayoutWrapper currentPageName={mainPageKey}>
           <MainPage />
         </LayoutWrapper>
