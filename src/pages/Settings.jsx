@@ -42,6 +42,7 @@ export default function Settings() {
   const [billingMessage, setBillingMessage] = useState('');
   const [purchasingPlan, setPurchasingPlan] = useState(null);
   const [isKiwifyCancelDialogOpen, setIsKiwifyCancelDialogOpen] = useState(false);
+  const [isConnectingGoogleCalendar, setIsConnectingGoogleCalendar] = useState(false);
 
   const { data: settings = [], isLoading: _isLoading } = useQuery({
     queryKey: ['appSettings'],
@@ -229,6 +230,18 @@ export default function Settings() {
   const handleSubmit = (e) => {
     e.preventDefault();
     updateMutation.mutate(formData);
+  };
+
+  const connectGoogleCalendar = async () => {
+    setIsConnectingGoogleCalendar(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('google-calendar-oauth-start');
+      if (error || !data?.url) throw error || new Error('Não foi possível iniciar a autorização do Google.');
+      window.location.assign(data.url);
+    } catch (error) {
+      setSaveFeedback({ type: 'error', message: error.message || 'Não foi possível conectar o Google Calendar.' });
+      setIsConnectingGoogleCalendar(false);
+    }
   };
 
   const addTimeSlot = (day) => {
@@ -586,8 +599,17 @@ export default function Settings() {
                   required={formData.sync_with_google_calendar}
                 />
                 <p className="text-sm text-slate-500">
-                  Este email será usado para criar eventos no Google Calendar do professor.
+                  Conecte sua conta para autorizar o sistema sem compartilhar o calendário manualmente.
                 </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={connectGoogleCalendar}
+                  disabled={isConnectingGoogleCalendar}
+                >
+                  <CalendarCheck className="w-4 h-4" />
+                  {isConnectingGoogleCalendar ? 'Conectando...' : 'Conectar Google Calendar'}
+                </Button>
               </div>
             )}
           </CardContent>

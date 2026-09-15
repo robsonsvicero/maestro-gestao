@@ -11,7 +11,7 @@ import LessonForm from "../components/schedule/LessonForm";
 import CalendarView from "../components/schedule/CalendarView";
 import ListView from "../components/schedule/ListView";
 import DayView from "../components/schedule/DayView";
-import { createGoogleCalendarEvent, syncPendingGoogleCalendarLessons } from "@/utils/googleCalendar";
+import { syncPendingGoogleCalendarLessons } from "@/utils/googleCalendar";
 
 export default function Schedule() {
   const [showForm, setShowForm] = useState(false);
@@ -63,11 +63,7 @@ export default function Schedule() {
       // Sync with Google Calendar if enabled
       if (settings.sync_with_google_calendar && settings.google_calendar_email) {
         try {
-          await createGoogleCalendarEvent({
-            calendarId: settings.google_calendar_email,
-            professionalName: settings.professional_name,
-            lesson: { ...data, id: lesson.id },
-          });
+          await syncPendingGoogleCalendarLessons();
         } catch (error) {
           console.error("Error syncing with Google Calendar:", error);
         }

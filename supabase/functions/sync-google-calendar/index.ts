@@ -10,52 +10,24 @@ const headers = {
 const reply = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), { status, headers });
 
-const base64Url = (value: string) =>
-  btoa(value).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+async function refreshGoogleAccessToken(refreshToken: string) {
+  const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
+  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+  if (!clientId || !clientSecret) throw new Error("Secrets OAuth do Google não configuradas.");
 
-async function getGoogleAccessToken() {
-  const raw = Deno.env.get("GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON");
-  if (!raw) throw new Error("GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON não configurada.");
-
-  const serviceAccount = JSON.parse(raw);
-  const now = Math.floor(Date.now() / 1000);
-  const unsignedToken = [
-    base64Url(JSON.stringify({ alg: "RS256", typ: "JWT" })),
-    base64Url(JSON.stringify({
-      iss: serviceAccount.client_email,
-      scope: "https://www.googleapis.com/auth/calendar",
-      aud: "https://oauth2.googleapis.com/token",
-      iat: now,
-      exp: now + 3600,
-    })),
-  ].join(".");
-
-  const pemBody = serviceAccount.private_key
-    .replace(/-----BEGIN PRIVATE KEY-----/, "")
-    .replace(/-----END PRIVATE KEY-----/, "")
-    .replace(/\s/g, "");
-  const binaryKey = Uint8Array.from(atob(pemBody), (character) => character.charCodeAt(0));
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryKey,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    cryptoKey,
-    new TextEncoder().encode(unsignedToken),
-  );
-  const jwt = `${unsignedToken}.${base64Url(String.fromCharCode(...new Uint8Array(signature)))}`;
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
   });
-
-  if (!tokenResponse.ok) throw new Error(`Google OAuth falhou: ${tokenResponse.status} ${await tokenResponse.text()}`);
-  return (await tokenResponse.json()).access_token as string;
+  const body = await tokenResponse.json();
+  if (!tokenResponse.ok || !body.access_token) throw new Error(`Google OAuth falhou: ${JSON.stringify(body)}`);
+  return body.access_token as string;
 }
 
 const toGoogleEvent = (lesson: Record<string, any>, professionalName: string | null) => ({
@@ -100,12 +72,18 @@ Deno.serve(async (request: Request) => {
   try {
     const { data: settings, error: settingsError } = await admin
       .from("app_settings")
-      .select("google_calendar_email, professional_name, sync_with_google_calendar")
+      .select("professional_name, sync_with_google_calendar")
       .eq("user_id", userId)
       .maybeSingle();
     if (settingsError) throw settingsError;
-    if (!settings?.sync_with_google_calendar || !settings.google_calendar_email) {
-      return reply(200, { ok: true, skipped: true, reason: "Sincronização desativada ou calendário não informado." });
+    const { data: connection, error: connectionError } = await admin
+      .from("google_calendar_connections")
+      .select("google_email, calendar_id, refresh_token, status")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (settingsError || connectionError) throw settingsError || connectionError;
+    if (!settings?.sync_with_google_calendar || !connection || connection.status !== "connected") {
+      return reply(200, { ok: true, skipped: true, reason: "Google Calendar não conectado." });
     }
 
     const today = new Date().toISOString().slice(0, 10);
@@ -121,7 +99,7 @@ Deno.serve(async (request: Request) => {
 
     if (!lessons?.length) return reply(200, { ok: true, synced: 0, failed: 0 });
 
-    const accessToken = await getGoogleAccessToken();
+    const accessToken = await refreshGoogleAccessToken(connection.refresh_token);
     let synced = 0;
     let failed = 0;
     const errors: Array<{ lessonId: string; error: string }> = [];
@@ -129,7 +107,7 @@ Deno.serve(async (request: Request) => {
     for (const lesson of lessons) {
       try {
         const eventResponse = await fetch(
-          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(settings.google_calendar_email)}/events`,
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(connection.calendar_id)}/events`,
           {
             method: "POST",
             headers: {
