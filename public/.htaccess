@@ -1,6 +1,6 @@
 RewriteEngine On
 
-# Preserve real files and directories; send React routes to the SPA entrypoint.
+# Preserve arquivos reais e encaminhe as demais rotas para o React Router.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [L]

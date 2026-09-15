@@ -21,22 +21,22 @@ Use o arquivo `.env.example` apenas como referência de quais variáveis são ne
 
 ---
 
-## Deploy de teste no Vercel
+## Deploy na Hostinger
 
-O projeto é uma aplicação React/Vite estática. O arquivo `vercel.json` já inclui o fallback necessário para que rotas como `/Schedule`, `/Settings` e `/login` funcionem ao atualizar a página diretamente.
+O projeto é uma aplicação React/Vite estática. Execute o build e envie o conteúdo da pasta `dist/` para a pasta pública do domínio na Hostinger, normalmente `public_html/`. O arquivo `public/.htaccess` é copiado para `dist/` e mantém rotas como `/Schedule`, `/Settings` e `/login` funcionando ao atualizar a página diretamente.
 
-No Vercel, configure as variáveis de ambiente abaixo para os ambientes **Preview** e **Production**:
+Antes do build, configure as variáveis de ambiente no arquivo `.env.local` ou no ambiente de build da Hostinger:
 
 ```env
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
 VITE_SUPABASE_ANON_KEY=sua-chave-anon-ou-publishable-do-supabase
 ```
 
-Não envie o arquivo `.env.local` ao repositório e **nunca adicione `SUPABASE_SERVICE_ROLE_KEY` ao Vercel**: ela concede privilégios administrativos ao banco e não deve ser exposta no navegador.
+Não envie o arquivo `.env.local` ao repositório e **nunca adicione `SUPABASE_SERVICE_ROLE_KEY` à Hostinger nem ao frontend**: ela concede privilégios administrativos ao banco e não deve ser exposta no navegador.
 
-Após receber a URL do Vercel, adicione-a no Supabase em **Authentication → URL Configuration**:
+Depois de publicar o domínio, adicione-o no Supabase em **Authentication → URL Configuration**:
 
-- **Site URL**: URL principal do Vercel;
-- **Redirect URLs**: `https://seu-projeto.vercel.app/Settings` e `https://seu-projeto.vercel.app/login`.
+- **Site URL**: `https://app-maeztro.gestfors.com.br`;
+- **Redirect URLs**: `https://app-maeztro.gestfors.com.br/Settings` e `https://app-maeztro.gestfors.com.br/login`.
 
 Para recuperação de senha, confirme que o provedor SMTP está configurado no Supabase.

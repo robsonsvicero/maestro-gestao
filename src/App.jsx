@@ -63,6 +63,13 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, accessStatus, navigateToLogin, isAdmin } = useAuth();
   const location = useLocation();
+  const isPublicHome = location.pathname === '/';
+
+  // The landing page must be visible without waiting for or requiring a session.
+  // Authenticated visitors are handled normally once the session is known.
+  if (isPublicHome && isLoadingAuth) {
+    return <PublicHome />;
+  }
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return <AppLoadingScreen />;
