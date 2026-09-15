@@ -146,7 +146,7 @@ export default function OAuthConsent() {
   }
 
   const client = (info && info.client_name) || "An AI client";
-  const appName = (info && info.app_name) || "this app";
+  const appName = (info && info.app_name) || "MAEZTRO Gestão";
 
   if (decided) {
     return (

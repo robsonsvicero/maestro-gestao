@@ -90,7 +90,7 @@ export default function FreeTrial() {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-2">
           <CardTitle className="text-2xl">Teste grátis por 14 dias</CardTitle>
-          <CardDescription>Crie sua conta e experimente o Maestro Gestão sem compromisso.</CardDescription>
+          <CardDescription>Crie sua conta e experimente o MAEZTRO Gestão sem compromisso.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={submit}>
@@ -155,7 +155,7 @@ export default function FreeTrial() {
               </div>
               <CardTitle className="text-2xl text-emerald-700 dark:text-emerald-400">Cadastro realizado com sucesso!</CardTitle>
               <CardDescription className="text-base text-slate-600 dark:text-slate-300">
-                Seus <strong>14 dias de teste gratuito</strong> foram ativados com sucesso no Maestro Gestão.
+                Seus <strong>14 dias de teste gratuito</strong> foram ativados com sucesso no MAEZTRO Gestão.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-0">

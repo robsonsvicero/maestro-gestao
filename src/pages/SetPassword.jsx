@@ -38,7 +38,7 @@ export default function SetPassword() {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader>
           <CardTitle>Defina sua senha</CardTitle>
-          <CardDescription>Crie uma senha para acessar sua assinatura do Maestro Gestão.</CardDescription>
+          <CardDescription>Crie uma senha para acessar sua assinatura do MAEZTRO Gestão.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={submit}>

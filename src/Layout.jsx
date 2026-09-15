@@ -156,7 +156,7 @@ export default function Layout({ children, currentPageName: _currentPageName }) 
     : null;
   const showExpiryAlert = accessType !== 'lifetime' && accessType && accessDaysRemaining !== null && accessDaysRemaining <= 4;
   const accessLabel = accessType === 'trial' ? 'Seu teste gratuito' : 'Sua assinatura';
-  const accessAction = accessType === 'trial' ? 'Assine o Maestro Gestão para continuar acessando após esse período.' : 'Renove sua assinatura para não perder o acesso.';
+  const accessAction = accessType === 'trial' ? 'Assine o MAEZTRO Gestão para continuar acessando após esse período.' : 'Renove sua assinatura para não perder o acesso.';
   const primaryNavItems = [
     { title: 'Dashboard', url: createPageUrl('Dashboard'), icon: LayoutDashboard },
     { title: 'Agenda', url: createPageUrl('Schedule'), icon: Calendar },

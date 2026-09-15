@@ -28,7 +28,7 @@ export default function Outros() {
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#094C7E] dark:text-blue-300">Atalhos</p>
         <h1 className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">Outros</h1>
-        <p className="mt-2 text-slate-600 dark:text-slate-400">Acesse rapidamente outras áreas do Maestro Gestão.</p>
+        <p className="mt-2 text-slate-600 dark:text-slate-400">Acesse rapidamente outras áreas do MAEZTRO Gestão.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-5">
